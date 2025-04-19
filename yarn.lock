@@ -1149,8 +1149,8 @@ __metadata:
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
     eslint: "npm:^9"
-    eslint-config-next: "npm:15.3.1"
-    next: "npm:15.3.1"
+    eslint-config-next: "npm:^15.3.1"
+    next: "npm:^15.3.1"
     react: "npm:^19.0.0"
     react-dom: "npm:^19.0.0"
     tailwindcss: "npm:^4"
@@ -1598,7 +1598,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-config-next@npm:15.3.1":
+"eslint-config-next@npm:^15.3.1":
   version: 15.3.1
   resolution: "eslint-config-next@npm:15.3.1"
   dependencies:
@@ -2807,7 +2807,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"next@npm:15.3.1":
+"next@npm:^15.3.1":
   version: 15.3.1
   resolution: "next@npm:15.3.1"
   dependencies:

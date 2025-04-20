@@ -44,6 +44,8 @@ export type VersionSpec = {
   effectivePhysicalBits: number;
   effectivePhysicalBytes: number;
   physicalPadSize: number;
+  numAlignmentPatterns: number;
+  alignmentPatternPositions: number[];
   codingVersion: CodingVersion;
 };
 
@@ -90,6 +92,30 @@ function getVersionSpec(version: Version): VersionSpec {
       : Math.floor(physicalBits / 8) * 8;
   const effectivePhysicalBytes = Math.ceil(effectivePhysicalBits / 8);
   const physicalPadSize = physicalBits - effectivePhysicalBits;
+
+  const numAlignmentPatterns =
+    alignmentGridWidth === 0
+      ? 0
+      : alignmentGridWidth * alignmentGridWidth +
+        (alignmentGridWidth - 1) * 2;
+  const alignmentPatternGap =
+    alignmentGridWidth === 0
+      ? 0
+        // 0.75 is strange but it is spec-compatible.
+        // It is presumably caused by double-rounding, first to the nearest integer
+        // (tie to floor) and then to the nearest even number (tie to ceil).
+      : Math.floor((versionNumber * 2 + 2) / alignmentGridWidth + 0.75) * 2;
+  const alignmentPatternPositions =
+    alignmentGridWidth === 0
+      ? []
+      : Array.from({ length: alignmentGridWidth + 1 }, (_, i) => {
+          if (i === 0) {
+            return 6;
+          } else {
+            return versionNumber * 4 + 10 - (alignmentGridWidth - i) * alignmentPatternGap;
+          }
+        });
+
   const codingVersion =
     isMicro
       ? version as CodingVersion
@@ -112,6 +138,8 @@ function getVersionSpec(version: Version): VersionSpec {
     effectivePhysicalBits,
     effectivePhysicalBytes,
     physicalPadSize,
+    numAlignmentPatterns,
+    alignmentPatternPositions,
     codingVersion,
   });
 }

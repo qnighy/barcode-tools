@@ -5,6 +5,10 @@ export type Version =
   | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30
   | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40;
 
+export type CodingVersion =
+  | "M1" | "M2" | "M3" | "M4"
+  | 9 | 26 | 40;
+
 export const VERSIONS: readonly Version[] = Object.freeze<Version[]>([
   "M1", "M2", "M3", "M4",
   ...Array.from({ length: 40 }, (_, i) => (i + 1) as Version),
@@ -12,6 +16,19 @@ export const VERSIONS: readonly Version[] = Object.freeze<Version[]>([
 
 export type ErrorCorrectionLevelOrNone = ErrorCorrectionLevel | "NONE";
 export type ErrorCorrectionLevel = "L" | "M" | "Q" | "H";
+
+export function compareVersion(a: Version, b: Version): -1 | 0 | 1 {
+  if (a === b) {
+    return 0;
+  }
+  if (typeof a === "string") {
+    return -1;
+  }
+  if (typeof b === "string") {
+    return 1;
+  }
+  return a < b ? -1 : 1;
+}
 
 export type VersionSpec = {
   version: Version;
@@ -27,6 +44,7 @@ export type VersionSpec = {
   effectivePhysicalBits: number;
   effectivePhysicalBytes: number;
   physicalPadSize: number;
+  codingVersion: CodingVersion;
 };
 
 const FINDER_PATTERN_SIZE = 8 * 8;
@@ -72,6 +90,14 @@ function getVersionSpec(version: Version): VersionSpec {
       : Math.floor(physicalBits / 8) * 8;
   const effectivePhysicalBytes = Math.ceil(effectivePhysicalBits / 8);
   const physicalPadSize = physicalBits - effectivePhysicalBits;
+  const codingVersion =
+    isMicro
+      ? version as CodingVersion
+      : versionNumber <= 9
+      ? 9
+      : versionNumber <= 26
+      ? 26
+      : 40;
   return Object.freeze({
     version,
     margin,
@@ -86,6 +112,7 @@ function getVersionSpec(version: Version): VersionSpec {
     effectivePhysicalBits,
     effectivePhysicalBytes,
     physicalPadSize,
+    codingVersion,
   });
 }
 

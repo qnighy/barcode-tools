@@ -66,12 +66,12 @@ function getVersionSpec(version: Version): VersionSpec {
   const alignmentGridWidth =
     isMicro || versionNumber <= 1
       ? 0
-      : Math.floor(versionNumber / 7) + 2; 
+      : Math.floor(versionNumber / 7) + 1;
   const alignmentPatternTotalSize =
     alignmentGridWidth === 0
       ? 0
-      : (alignmentGridWidth - 1) * (alignmentGridWidth - 1) * ALIGNMENT_PATTERN_SIZE +
-        (alignmentGridWidth - 2) * 2 * ALIGNMENT_PATTERN_SIZE_MINUS_TIMING;
+      : alignmentGridWidth * alignmentGridWidth * ALIGNMENT_PATTERN_SIZE +
+        (alignmentGridWidth - 1) * 2 * ALIGNMENT_PATTERN_SIZE_MINUS_TIMING;
   const functionPatternTotalSize =
     finderPatternTotalSize +
     timingPatternTotalSize +

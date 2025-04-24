@@ -46,7 +46,20 @@ export type VersionSpec = {
   physicalPadSize: number;
   numAlignmentPatterns: number;
   alignmentPatternPositions: number[];
+  errorCorrectionSpecs: Partial<Record<ErrorCorrectionLevelOrNone, ErrorCorrectionSpec>>;
   codingVersion: CodingVersion;
+};
+export type ErrorCorrectionSpec = {
+  numEccBlocks: number;
+  numEccBytes: number;
+  p: number;
+  eccBlockGroups: ErrorCorrectionBlockGroup[];
+};
+export type ErrorCorrectionBlockGroup = {
+  numBlocks: number;
+  c: number;
+  k: number;
+  r: number;
 };
 
 const FINDER_PATTERN_SIZE = 8 * 8;
@@ -116,6 +129,39 @@ function getVersionSpec(version: Version): VersionSpec {
           }
         });
 
+  const errorCorrectionSpecs: Partial<Record<ErrorCorrectionLevelOrNone, ErrorCorrectionSpec>> = {};
+  for (const level of ["NONE", "L", "M", "Q", "H"] as const) {
+    const row = ERROR_CORRECTION_LEVEL_TABLE[level][version];
+    if (!row) {
+      continue;
+    }
+    const [numBlocks, r, p] = row;
+    const numBlocks2 = effectivePhysicalBytes % numBlocks;
+    const numBlocks1 = numBlocks - numBlocks2;
+    const blockSize1 = Math.floor(effectivePhysicalBytes / numBlocks);
+    const blockSize2 = blockSize1 + 1;
+    const eccBlockGroups: ErrorCorrectionBlockGroup[] = [{
+      numBlocks: numBlocks1,
+      c: blockSize1,
+      k: blockSize1 - r * 2 - p,
+      r,
+    }];
+    if (numBlocks2 > 0) {
+      eccBlockGroups.push({
+        numBlocks: numBlocks2,
+        c: blockSize2,
+        k: blockSize2 - r * 2 - p,
+        r,
+      });
+    }
+    errorCorrectionSpecs[level] = {
+      numEccBlocks: numBlocks,
+      numEccBytes: numBlocks * (r * 2 + p),
+      p,
+      eccBlockGroups,
+    };
+  }
+
   const codingVersion =
     isMicro
       ? version as CodingVersion
@@ -140,9 +186,195 @@ function getVersionSpec(version: Version): VersionSpec {
     physicalPadSize,
     numAlignmentPatterns,
     alignmentPatternPositions,
+    errorCorrectionSpecs,
     codingVersion,
   });
 }
+
+const ERROR_CORRECTION_LEVEL_TABLE: Record<ErrorCorrectionLevelOrNone, Partial<Record<Version, [
+  numBlocks: number,
+  r: number,
+  p: number
+]>>> = {
+  NONE: {
+    "M1": [ 1,  0, 2],
+  },
+  L: {
+    "M2": [ 1,  1, 3],
+    "M3": [ 1,  2, 2],
+    "M4": [ 1,  3, 2],
+       1: [ 1,  2, 3],
+       2: [ 1,  4, 2],
+       3: [ 1,  7, 1],
+       4: [ 1, 10, 0],
+       5: [ 1, 13, 0],
+       6: [ 2,  9, 0],
+       7: [ 2, 10, 0],
+       8: [ 2, 12, 0],
+       9: [ 2, 15, 0],
+      10: [ 4,  9, 0],
+      11: [ 4, 10, 0],
+      12: [ 4, 12, 0],
+      13: [ 4, 13, 0],
+      14: [ 4, 15, 0],
+      15: [ 6, 11, 0],
+      16: [ 6, 12, 0],
+      17: [ 6, 14, 0],
+      18: [ 6, 15, 0],
+      19: [ 7, 14, 0],
+      20: [ 8, 14, 0],
+      21: [ 8, 14, 0],
+      22: [ 9, 14, 0],
+      23: [ 9, 15, 0],
+      24: [10, 15, 0],
+      25: [12, 13, 0],
+      26: [12, 14, 0],
+      27: [12, 15, 0],
+      28: [13, 15, 0],
+      29: [14, 15, 0],
+      30: [15, 15, 0],
+      31: [16, 15, 0],
+      32: [17, 15, 0],
+      33: [18, 15, 0],
+      34: [19, 15, 0],
+      35: [19, 15, 0],
+      36: [20, 15, 0],
+      37: [21, 15, 0],
+      38: [22, 15, 0],
+      39: [24, 15, 0],
+      40: [25, 15, 0],
+  },
+  M: {
+    "M2": [ 1,  2, 2],
+    "M3": [ 1,  4, 2],
+    "M4": [ 1,  5, 0],
+       1: [ 1,  4, 2],
+       2: [ 1,  8, 0],
+       3: [ 1, 13, 0],
+       4: [ 2,  9, 0],
+       5: [ 2, 12, 0],
+       6: [ 4,  8, 0],
+       7: [ 4,  9, 0],
+       8: [ 4, 11, 0],
+       9: [ 5, 11, 0],
+      10: [ 5, 13, 0],
+      11: [ 5, 15, 0],
+      12: [ 8, 11, 0],
+      13: [ 9, 11, 0],
+      14: [ 9, 12, 0],
+      15: [10, 12, 0],
+      16: [10, 14, 0],
+      17: [11, 14, 0],
+      18: [13, 13, 0],
+      19: [14, 13, 0],
+      20: [16, 13, 0],
+      21: [17, 13, 0],
+      22: [17, 14, 0],
+      23: [18, 14, 0],
+      24: [20, 14, 0],
+      25: [21, 14, 0],
+      26: [23, 14, 0],
+      27: [25, 14, 0],
+      28: [26, 14, 0],
+      29: [28, 14, 0],
+      30: [29, 14, 0],
+      31: [31, 14, 0],
+      32: [33, 14, 0],
+      33: [35, 14, 0],
+      34: [37, 14, 0],
+      35: [38, 14, 0],
+      36: [40, 14, 0],
+      37: [43, 14, 0],
+      38: [45, 14, 0],
+      39: [47, 14, 0],
+      40: [49, 14, 0],
+  },
+  Q: {
+    "M4": [ 1,  7, 0],
+       1: [ 1,  6, 1],
+       2: [ 1, 11, 0],
+       3: [ 2,  9, 0],
+       4: [ 2, 13, 0],
+       5: [ 4,  9, 0],
+       6: [ 4, 12, 0],
+       7: [ 6,  9, 0],
+       8: [ 6, 11, 0],
+       9: [ 8, 10, 0],
+      10: [ 8, 12, 0],
+      11: [ 8, 14, 0],
+      12: [10, 13, 0],
+      13: [12, 12, 0],
+      14: [16, 10, 0],
+      15: [12, 15, 0],
+      16: [17, 12, 0],
+      17: [16, 14, 0],
+      18: [18, 14, 0],
+      19: [21, 13, 0],
+      20: [20, 15, 0],
+      21: [23, 14, 0],
+      22: [23, 15, 0],
+      23: [25, 15, 0],
+      24: [27, 15, 0],
+      25: [29, 15, 0],
+      26: [34, 14, 0],
+      27: [34, 15, 0],
+      28: [35, 15, 0],
+      29: [38, 15, 0],
+      30: [40, 15, 0],
+      31: [43, 15, 0],
+      32: [45, 15, 0],
+      33: [48, 15, 0],
+      34: [51, 15, 0],
+      35: [53, 15, 0],
+      36: [56, 15, 0],
+      37: [59, 15, 0],
+      38: [62, 15, 0],
+      39: [65, 15, 0],
+      40: [68, 15, 0],
+  },
+  H: {
+       1: [ 1,  8, 1],
+       2: [ 1, 14, 0],
+       3: [ 2, 11, 0],
+       4: [ 4,  8, 0],
+       5: [ 4, 11, 0],
+       6: [ 4, 14, 0],
+       7: [ 5, 13, 0],
+       8: [ 6, 13, 0],
+       9: [ 8, 12, 0],
+      10: [ 8, 14, 0],
+      11: [11, 12, 0],
+      12: [11, 14, 0],
+      13: [16, 11, 0],
+      14: [16, 12, 0],
+      15: [18, 12, 0],
+      16: [16, 15, 0],
+      17: [19, 14, 0],
+      18: [21, 14, 0],
+      19: [25, 13, 0],
+      20: [25, 14, 0],
+      21: [25, 15, 0],
+      22: [34, 12, 0],
+      23: [30, 15, 0],
+      24: [32, 15, 0],
+      25: [35, 15, 0],
+      26: [37, 15, 0],
+      27: [40, 15, 0],
+      28: [42, 15, 0],
+      29: [45, 15, 0],
+      30: [48, 15, 0],
+      31: [51, 15, 0],
+      32: [54, 15, 0],
+      33: [57, 15, 0],
+      34: [60, 15, 0],
+      35: [63, 15, 0],
+      36: [66, 15, 0],
+      37: [70, 15, 0],
+      38: [74, 15, 0],
+      39: [77, 15, 0],
+      40: [81, 15, 0],
+  },
+};
 
 export const SPECS: Record<Version, VersionSpec> = Object.freeze(Object.fromEntries(
   VERSIONS.map((version) => Object.freeze([version, getVersionSpec(version)]))

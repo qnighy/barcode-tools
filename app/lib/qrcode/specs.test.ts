@@ -11,19 +11,19 @@ test("SPECS matches against Table 1", () => {
     version: Version,
     width: number,
     functionPatternTotalSize: number,
-    metadataSize: number,
-    physicalBits: number,
-    effectivePhysicalBytes: number,
-    physicalPadSize: number,
+    formatAndVersionInfoSize: number,
+    dataCapacityBits: number,
+    dataCapacityBytes: number,
+    remainderBits: number,
   ];
   const actual: Row[] = Object.values(VERSIONS).map((version) => [
     SPECS[version].version,
     SPECS[version].width,
     SPECS[version].functionPatternTotalSize,
-    SPECS[version].metadataSize,
-    SPECS[version].physicalBits,
-    SPECS[version].effectivePhysicalBytes,
-    SPECS[version].physicalPadSize,
+    SPECS[version].formatAndVersionInfoSize,
+    SPECS[version].dataCapacityBits,
+    SPECS[version].dataCapacityBytes,
+    SPECS[version].remainderBits,
   ]);
   const expected: Row[] = [
     [M1,  11,    70, 15,     36,     5, 0],
@@ -98,7 +98,7 @@ test("SPECS matches against Table 9", () => {
       }
       actual.push([
         version,
-        SPECS[version].effectivePhysicalBytes,
+        SPECS[version].dataCapacityBytes,
         level,
         spec.numEccBytes,
         spec.p,

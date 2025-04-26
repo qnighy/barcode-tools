@@ -39,11 +39,13 @@ export type VersionSpec = {
   alignmentGridWidth: number;
   alignmentPatternTotalSize: number;
   functionPatternTotalSize: number;
-  metadataSize: number;
-  physicalBits: number;
-  effectivePhysicalBits: number;
-  effectivePhysicalBytes: number;
-  physicalPadSize: number;
+  formatInfoSize: number;
+  versionInfoSize: number;
+  formatAndVersionInfoSize: number;
+  dataCapacityBits: number;
+  truncatedDataCapacityBits: number;
+  dataCapacityBytes: number;
+  remainderBits: number;
   numAlignmentPatterns: number;
   alignmentPatternPositions: number[];
   errorCorrectionSpecs: Partial<Record<ErrorCorrectionLevelOrNone, ErrorCorrectionSpec>>;
@@ -91,20 +93,17 @@ function getVersionSpec(version: Version): VersionSpec {
     finderPatternTotalSize +
     timingPatternTotalSize +
     alignmentPatternTotalSize;
-  const metadataSize =
+  const formatInfoSize = isMicro ? 15 : 31;
+  const versionInfoSize = isMicro || versionNumber <= 6 ? 0 : 36;
+  const formatAndVersionInfoSize = formatInfoSize + versionInfoSize;
+  const dataCapacityBits =
+    width * width - functionPatternTotalSize - formatAndVersionInfoSize;
+  const truncatedDataCapacityBits =
     isMicro
-      ? 15
-      : versionNumber <= 6
-      ? 31
-      : 67;
-  const physicalBits =
-    width * width - functionPatternTotalSize - metadataSize;
-  const effectivePhysicalBits =
-    isMicro
-      ? physicalBits
-      : Math.floor(physicalBits / 8) * 8;
-  const effectivePhysicalBytes = Math.ceil(effectivePhysicalBits / 8);
-  const physicalPadSize = physicalBits - effectivePhysicalBits;
+      ? dataCapacityBits
+      : Math.floor(dataCapacityBits / 8) * 8;
+  const dataCapacityBytes = Math.ceil(truncatedDataCapacityBits / 8);
+  const remainderBits = dataCapacityBits - truncatedDataCapacityBits;
 
   const numAlignmentPatterns =
     alignmentGridWidth === 0
@@ -136,9 +135,9 @@ function getVersionSpec(version: Version): VersionSpec {
       continue;
     }
     const [numBlocks, r, p] = row;
-    const numBlocks2 = effectivePhysicalBytes % numBlocks;
+    const numBlocks2 = dataCapacityBytes % numBlocks;
     const numBlocks1 = numBlocks - numBlocks2;
-    const blockSize1 = Math.floor(effectivePhysicalBytes / numBlocks);
+    const blockSize1 = Math.floor(dataCapacityBytes / numBlocks);
     const blockSize2 = blockSize1 + 1;
     const eccBlockGroups: ErrorCorrectionBlockGroup[] = [{
       numBlocks: numBlocks1,
@@ -170,7 +169,7 @@ function getVersionSpec(version: Version): VersionSpec {
       : versionNumber <= 26
       ? 26
       : 40;
-  return Object.freeze({
+  return Object.freeze<VersionSpec>({
     version,
     margin,
     width,
@@ -179,11 +178,13 @@ function getVersionSpec(version: Version): VersionSpec {
     alignmentGridWidth,
     alignmentPatternTotalSize,
     functionPatternTotalSize,
-    metadataSize,
-    physicalBits,
-    effectivePhysicalBits,
-    effectivePhysicalBytes,
-    physicalPadSize,
+    formatInfoSize,
+    versionInfoSize,
+    formatAndVersionInfoSize,
+    dataCapacityBits,
+    truncatedDataCapacityBits,
+    dataCapacityBytes,
+    remainderBits,
     numAlignmentPatterns,
     alignmentPatternPositions,
     errorCorrectionSpecs,

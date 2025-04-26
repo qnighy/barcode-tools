@@ -56,6 +56,12 @@ export type ErrorCorrectionSpec = {
   numEccBytes: number;
   p: number;
   eccBlockGroups: ErrorCorrectionBlockGroup[];
+  dataBytes: number;
+  dataBits: number;
+  digitCapacity: number;
+  alphanumericCapacity: number;
+  byteCapacity: number;
+  kanjiCapacity: number;
 };
 export type ErrorCorrectionBlockGroup = {
   numBlocks: number;
@@ -68,6 +74,138 @@ const FINDER_PATTERN_SIZE = 8 * 8;
 const ALIGNMENT_PATTERN_SIZE = 5 * 5;
 // Those that are rendered over the timing pattern
 const ALIGNMENT_PATTERN_SIZE_MINUS_TIMING = 5 * 4;
+
+export type CodingVersionSpec = {
+  codingVersion: CodingVersion;
+  modeIndicatorBits: number;
+  digitModeIndicator: string | null;
+  alphanumericModeIndicator: string | null;
+  byteModeIndicator: string | null;
+  kanjiModeIndicator: string | null;
+  FNC1FirstPositionIndicator: string | null;
+  FNC1SecondPositionIndicator: string | null;
+  ECIModeIndicator: string | null;
+  structuredAppendModeIndicator: string | null;
+  digitModeCountBits: number;
+  alphanumericModeCountBits: number;
+  byteModeCountBits: number;
+  kanjiModeCountBits: number;
+};
+
+export const CODING_SPECS: Record<CodingVersion, CodingVersionSpec> = Object.freeze({
+  M1: {
+    codingVersion: "M1",
+    modeIndicatorBits: 0,
+    digitModeIndicator: "",
+    alphanumericModeIndicator: null,
+    byteModeIndicator: null,
+    kanjiModeIndicator: null,
+    FNC1FirstPositionIndicator: null,
+    FNC1SecondPositionIndicator: null,
+    ECIModeIndicator: null,
+    structuredAppendModeIndicator: null,
+    digitModeCountBits: 3,
+    alphanumericModeCountBits: -1,
+    byteModeCountBits: -1,
+    kanjiModeCountBits: -1,
+  },
+  M2: {
+    codingVersion: "M2",
+    modeIndicatorBits: 1,
+    digitModeIndicator: "0",
+    alphanumericModeIndicator: "1",
+    byteModeIndicator: null,
+    kanjiModeIndicator: null,
+    FNC1FirstPositionIndicator: null,
+    FNC1SecondPositionIndicator: null,
+    ECIModeIndicator: null,
+    structuredAppendModeIndicator: null,
+    digitModeCountBits: 4,
+    alphanumericModeCountBits: 3,
+    byteModeCountBits: -1,
+    kanjiModeCountBits: -1,
+  },
+  M3: {
+    codingVersion: "M3",
+    modeIndicatorBits: 2,
+    digitModeIndicator: "00",
+    alphanumericModeIndicator: "01",
+    byteModeIndicator: "10",
+    kanjiModeIndicator: "11",
+    FNC1FirstPositionIndicator: null,
+    FNC1SecondPositionIndicator: null,
+    ECIModeIndicator: null,
+    structuredAppendModeIndicator: null,
+    digitModeCountBits: 5,
+    alphanumericModeCountBits: 4,
+    byteModeCountBits: 4,
+    kanjiModeCountBits: 3,
+  },
+  M4: {
+    codingVersion: "M4",
+    modeIndicatorBits: 3,
+    digitModeIndicator: "000",
+    alphanumericModeIndicator: "001",
+    byteModeIndicator: "010",
+    kanjiModeIndicator: "011",
+    FNC1FirstPositionIndicator: null,
+    FNC1SecondPositionIndicator: null,
+    ECIModeIndicator: null,
+    structuredAppendModeIndicator: null,
+    digitModeCountBits: 6,
+    alphanumericModeCountBits: 5,
+    byteModeCountBits: 5,
+    kanjiModeCountBits: 4,
+  },
+  9: {
+    codingVersion: 9,
+    modeIndicatorBits: 4,
+    digitModeIndicator: "0001",
+    alphanumericModeIndicator: "0010",
+    byteModeIndicator: "0100",
+    kanjiModeIndicator: "1000",
+    FNC1FirstPositionIndicator: "0101",
+    FNC1SecondPositionIndicator: "1001",
+    ECIModeIndicator: "0111",
+    structuredAppendModeIndicator: "0011",
+    digitModeCountBits: 10,
+    alphanumericModeCountBits: 9,
+    byteModeCountBits: 8,
+    kanjiModeCountBits: 8,
+  },
+  26: {
+    codingVersion: 26,
+    modeIndicatorBits: 4,
+    digitModeIndicator: "0001",
+    alphanumericModeIndicator: "0010",
+    byteModeIndicator: "0100",
+    kanjiModeIndicator: "1000",
+    FNC1FirstPositionIndicator: "0101",
+    FNC1SecondPositionIndicator: "1001",
+    ECIModeIndicator: "0111",
+    structuredAppendModeIndicator: "0011",
+    digitModeCountBits: 12,
+    alphanumericModeCountBits: 11,
+    byteModeCountBits: 16,
+    kanjiModeCountBits: 10,
+  },
+  40: {
+    codingVersion: 40,
+    modeIndicatorBits: 4,
+    digitModeIndicator: "0001",
+    alphanumericModeIndicator: "0010",
+    byteModeIndicator: "0100",
+    kanjiModeIndicator: "1000",
+    FNC1FirstPositionIndicator: "0101",
+    FNC1SecondPositionIndicator: "1001",
+    ECIModeIndicator: "0111",
+    structuredAppendModeIndicator: "0011",
+    digitModeCountBits: 14,
+    alphanumericModeCountBits: 13,
+    byteModeCountBits: 16,
+    kanjiModeCountBits: 12,
+  },
+});
 
 function getVersionSpec(version: Version): VersionSpec {
   const isMicro = typeof version === "string" && version.startsWith("M");
@@ -128,6 +266,16 @@ function getVersionSpec(version: Version): VersionSpec {
           }
         });
 
+  const codingVersion =
+    isMicro
+      ? version as CodingVersion
+      : versionNumber <= 9
+      ? 9
+      : versionNumber <= 26
+      ? 26
+      : 40;
+  const codingSpec = CODING_SPECS[codingVersion];
+
   const errorCorrectionSpecs: Partial<Record<ErrorCorrectionLevelOrNone, ErrorCorrectionSpec>> = {};
   for (const level of ["NONE", "L", "M", "Q", "H"] as const) {
     const row = ERROR_CORRECTION_LEVEL_TABLE[level][version];
@@ -153,22 +301,36 @@ function getVersionSpec(version: Version): VersionSpec {
         r,
       });
     }
+    const numEccBytes = numBlocks * (r * 2 + p);
+    const dataBytes = dataCapacityBytes - numEccBytes;
+    const dataBits = truncatedDataCapacityBits - numEccBytes * 8;
+    const digitCapacity = Math.floor((dataBits - codingSpec.modeIndicatorBits - codingSpec.digitModeCountBits) * 3 / 10);
+    const alphanumericCapacity =
+      codingSpec.alphanumericModeIndicator != null
+      ? Math.floor((dataBits - codingSpec.modeIndicatorBits - codingSpec.alphanumericModeCountBits) * 2 / 11)
+      : 0;
+    const byteCapacity =
+      codingSpec.byteModeIndicator != null
+      ? Math.floor((dataBits - codingSpec.modeIndicatorBits - codingSpec.byteModeCountBits) / 8)
+      : 0;
+    const kanjiCapacity =
+      codingSpec.kanjiModeIndicator != null
+      ? Math.floor((dataBits - codingSpec.modeIndicatorBits - codingSpec.kanjiModeCountBits) / 13)
+      : 0;
     errorCorrectionSpecs[level] = {
       numEccBlocks: numBlocks,
       numEccBytes: numBlocks * (r * 2 + p),
       p,
       eccBlockGroups,
+      dataBytes,
+      dataBits,
+      digitCapacity,
+      alphanumericCapacity,
+      byteCapacity,
+      kanjiCapacity,
     };
   }
 
-  const codingVersion =
-    isMicro
-      ? version as CodingVersion
-      : versionNumber <= 9
-      ? 9
-      : versionNumber <= 26
-      ? 26
-      : 40;
   return Object.freeze<VersionSpec>({
     version,
     margin,
@@ -247,7 +409,7 @@ const ERROR_CORRECTION_LEVEL_TABLE: Record<ErrorCorrectionLevelOrNone, Partial<R
   },
   M: {
     "M2": [ 1,  2, 2],
-    "M3": [ 1,  4, 2],
+    "M3": [ 1,  3, 2],
     "M4": [ 1,  5, 0],
        1: [ 1,  4, 2],
        2: [ 1,  8, 0],

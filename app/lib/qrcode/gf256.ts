@@ -8,6 +8,10 @@
 
 const PRIMITIVE_POLYNOMIAL = 0x11D; // x^8 + x^4 + x^3 + x^2 + 1
 const PRIMITIVE_ROOT = 2;
+/**
+ * A sentinel value for log(0)
+ */
+const LOG_ZERO = 255;
 
 /**
  * Multiply two GF(256) elements using representation
@@ -17,10 +21,10 @@ export function mul(x: number, y: number): number {
   if (x === 0 || y === 0) {
     return 0;
   }
-  const logX = log[x];
-  const logY = log[y];
+  const logX = logTable[x];
+  const logY = logTable[y];
   const logZ = (logX + logY) % 255;
-  return exp[logZ];
+  return expTable[logZ];
 }
 
 /**
@@ -31,7 +35,7 @@ export function inv(x: number): number {
   if (x === 0) {
     return 0;
   }
-  return exp[(255 - log[x]) % 255];
+  return expTable[(255 - logTable[x]) % 255];
 }
 
 /**
@@ -49,24 +53,24 @@ function mulNaive(x: number, y: number): number {
 }
 
 function initTables(): {
-  log: number[];
-  exp: number[];
+  logTable: number[];
+  expTable: number[];
 } {
-  const log = Array.from({ length: 256 }, () => -1);
-  const exp = Array.from({ length: 255 }, () => 0);
+  const logTable = Array.from({ length: 256 }, () => LOG_ZERO);
+  const expTable = Array.from({ length: 255 }, () => 0);
   let current = 1;
   for (let i = 0; i < 255; i++) {
-    if (log[current] !== -1) {
+    if (logTable[current] !== LOG_ZERO) {
       throw new Error(`Invalid order: ${i}`);
     }
-    log[current] = i;
-    exp[i] = current;
+    logTable[current] = i;
+    expTable[i] = current;
     current = mulNaive(current, PRIMITIVE_ROOT);
   }
   if (current !== 1) {
     throw new Error(`Invalid order`);
   }
-  return { log, exp };
+  return { logTable, expTable };
 }
 
-const { log, exp } = initTables();
+const { logTable, expTable } = initTables();

@@ -57,7 +57,7 @@ function initTables(): {
   expTable: number[];
 } {
   const logTable = Array.from({ length: 256 }, () => LOG_ZERO);
-  const expTable = Array.from({ length: 255 }, () => 0);
+  const expTable = Array.from({ length: 256 }, () => 0);
   let current = 1;
   for (let i = 0; i < 255; i++) {
     if (logTable[current] !== LOG_ZERO) {
@@ -70,6 +70,7 @@ function initTables(): {
   if (current !== 1) {
     throw new Error(`Invalid order`);
   }
+  expTable[LOG_ZERO] = 0;
   return { logTable, expTable };
 }
 

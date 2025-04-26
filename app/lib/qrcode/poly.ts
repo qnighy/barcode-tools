@@ -19,6 +19,34 @@ export class RSPolynomial {
     this.nonLeadingLogCoefficients = nonLeadingLogCoefficients;
     Object.freeze(this);
   }
+
+  /**
+   * Generates the Reed-Solomon code for the given data.
+   * @param block the input/output buffer.
+   *              the first `block.length - degree` bytes are
+   *              the input data, and the last `degree` bytes are
+   *              the buffer for the Reed-Solomon code.
+   */
+  generate(block: Uint8Array): void {
+    const degree = this.nonLeadingLogCoefficients.length;
+    if (block.length < degree) {
+      throw new Error("Buffer too small");
+    }
+    const inputLength = block.length - degree;
+    const output = block.subarray(inputLength);
+    output.fill(0);
+    for (const dataByte of block.subarray(0, inputLength)) {
+      const topCoeff = add(dataByte as GF256, output[0] as GF256);
+      const logTopCoeff = log(topCoeff);
+      for (let j = 0; j < degree - 1; j++) {
+        output[j] = add(
+          output[j + 1] as GF256,
+          exp(addExponents(logTopCoeff, this.nonLeadingLogCoefficients[degree - 1 - j]))
+        );
+      }
+      output[degree - 1] = exp(addExponents(logTopCoeff, this.nonLeadingLogCoefficients[0]));
+    }
+  }
 }
 
 const MAX_DEGREE = 68;

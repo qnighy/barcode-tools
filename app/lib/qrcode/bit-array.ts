@@ -152,8 +152,6 @@ export class BitArray implements Iterable<Bit> {
     }
     const abs = this.#bitOffset + index;
     return ((this.#wordBuffer.getUint32(abs >> 5) >> (31 - (abs & 31))) & 1) as Bit;
-    const [absWord, absInWord] = splitIndex32(this.#bitOffset + index);
-    return lsb(this.#get32Full(absWord) >> (31 - absInWord));
   }
 
   getNumber(index: number, length: number): number {
@@ -311,13 +309,6 @@ function byteSizeFor(bitLength: number): number {
   return Math.ceil(bitLength / UNIT_BIT_LENGTH) * UNIT_BYTE_LENGTH;
 }
 
-function splitIndex32(index: number): [number, number] {
-  return [index >> 5, index & 31];
-}
-
-function lsb(value: number): Bit {
-  return (value & 1) as Bit;
-}
 function rangeMask(length: number, subLength: number): number {
   return (length === 32 ? (2 ** 32) : (1 << length)) - (1 << subLength);
 }

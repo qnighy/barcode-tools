@@ -54,6 +54,10 @@ export class BitArray implements Iterable<Bit> {
     }
   }
 
+  get length(): number {
+    return this.#bitLength;
+  }
+
   static from(source: ArrayLike<BitLike> | Iterable<BitLike>): BitArray {
     const bitArray = new BitArray();
     bitArray.#initFrom(source);

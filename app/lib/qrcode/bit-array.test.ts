@@ -1,5 +1,10 @@
-import { expect, test } from "vitest";
+import { fc, test } from "@fast-check/vitest";
+import { expect } from "vitest";
 import { BitArray } from "./bit-array";
+
+function bits(): fc.Arbitrary<BitArray> {
+  return fc.array(fc.integer({ min: 0, max: 1 }), { maxLength: 32 }).chain((bits) => fc.constant(BitArray.from(bits)));
+}
 
 test("construct with no argument", () => {
   expect(Array.from(new BitArray())).toEqual([]);
@@ -75,6 +80,14 @@ test("BitArray.from with TypedArray", () => {
 
 test("BitArray.from with BitArray", () => {
   expect(Array.from(BitArray.from(BitArray.from([1, 0, 2])))).toEqual([1, 0, 1]);
+});
+
+test.prop([bits(), fc.nat(), fc.nat()])("getNumber", (bits, start_, len_) => {
+  const start = start_ % (bits.length + 1);
+  const len = len_ % (bits.length + 1 - start);
+  const expected = parseInt("0" + Array.from(bits).slice(start, start + len).join(""), 2);
+  const actual = bits.getNumber(start, len);
+  expect(actual).toEqual(expected);
 });
 
 test("getAt in-range", () => {

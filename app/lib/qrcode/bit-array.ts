@@ -1,7 +1,7 @@
 export type Bit = 0 | 1;
 export type BitLike = number | boolean;
 export class BitArray implements Iterable<Bit> {
-  #byteBuffer: Uint8Array<ArrayBuffer>;
+  #wordBuffer: Uint8Array<ArrayBuffer>;
   #growable: boolean = false;
   #bitOffset: number;
   #bitLength: number;
@@ -20,25 +20,25 @@ export class BitArray implements Iterable<Bit> {
       if (length < 0) {
         throw new RangeError("Length must be non-negative");
       }
-      this.#byteBuffer = new Uint8Array(Math.ceil(length / 8));
+      this.#wordBuffer = new Uint8Array(Math.ceil(length / 8));
       this.#growable = true;
       this.#bitOffset = 0;
       this.#bitLength = length;
     } else if (source instanceof ArrayBuffer) {
-      this.#byteBuffer = new Uint8Array(source);
+      this.#wordBuffer = new Uint8Array(source);
       this.#growable = bitOffset == null;
       bitOffset = Math.trunc(bitOffset ?? 0);
-      if (bitOffset < 0 || bitOffset > this.#byteBuffer.length * 8) {
+      if (bitOffset < 0 || bitOffset > this.#wordBuffer.length * 8) {
         throw new RangeError("Offset out of bounds");
       }
       this.#bitOffset = bitOffset;
-      bitLength = Math.trunc(bitLength ?? (this.#byteBuffer.length * 8 - bitOffset));
-      if (bitLength < 0 || bitLength + bitOffset > this.#byteBuffer.length * 8) {
+      bitLength = Math.trunc(bitLength ?? (this.#wordBuffer.length * 8 - bitOffset));
+      if (bitLength < 0 || bitLength + bitOffset > this.#wordBuffer.length * 8) {
         throw new RangeError("Length out of bounds");
       }
       this.#bitLength = bitLength;
     } else {
-      this.#byteBuffer = new Uint8Array(0);
+      this.#wordBuffer = new Uint8Array(0);
       this.#growable = true;
       this.#bitOffset = 0;
       this.#bitLength = 0;
@@ -53,9 +53,9 @@ export class BitArray implements Iterable<Bit> {
   }
 
   #initFrom(source: ArrayLike<BitLike> | Iterable<BitLike>): void {
-    if (#byteBuffer in source && source.#bitOffset % 8 === 0) {
+    if (#wordBuffer in source && source.#bitOffset % 8 === 0) {
       // Use slice rather than subarray to get a new buffer
-      this.#byteBuffer = source.#byteBuffer.slice(source.#bitOffset >> 3, Math.ceil((source.#bitLength + source.#bitOffset) / 8));
+      this.#wordBuffer = source.#wordBuffer.slice(source.#bitOffset >> 3, Math.ceil((source.#bitLength + source.#bitOffset) / 8));
       this.#growable = true;
       this.#bitOffset = 0;
       this.#bitLength = source.#bitLength;
@@ -74,7 +74,7 @@ export class BitArray implements Iterable<Bit> {
       if (length < 0) {
         throw new RangeError("Length must be non-negative");
       }
-      this.#byteBuffer = new Uint8Array(Math.ceil(length / 8));
+      this.#wordBuffer = new Uint8Array(Math.ceil(length / 8));
       this.#growable = true;
       this.#bitOffset = 0;
       this.#bitLength = length;
@@ -89,7 +89,7 @@ export class BitArray implements Iterable<Bit> {
       return undefined as unknown as Bit;
     }
     const abs = this.#bitOffset + index;
-    return ((this.#byteBuffer[abs >> 3] >> (7 - (abs & 7))) & 1) as Bit;
+    return ((this.#wordBuffer[abs >> 3] >> (7 - (abs & 7))) & 1) as Bit;
   }
 
   setAt(index: number, value: BitLike): void {
@@ -98,9 +98,9 @@ export class BitArray implements Iterable<Bit> {
     }
     const abs = this.#bitOffset + index;
     if (value) {
-      this.#byteBuffer[abs >> 3] |= 1 << (7 - (abs & 7));
+      this.#wordBuffer[abs >> 3] |= 1 << (7 - (abs & 7));
     } else {
-      this.#byteBuffer[abs >> 3] &= ~(1 << (7 - (abs & 7)));
+      this.#wordBuffer[abs >> 3] &= ~(1 << (7 - (abs & 7)));
     }
   }
 
@@ -135,7 +135,7 @@ export class BitArray implements Iterable<Bit> {
       const bitEnd = newLength - pos * 8;
       if (bitStart < bitEnd) {
         const mask = (1 << (8 - bitStart)) - (1 << (8 - bitEnd));
-        this.#byteBuffer[pos] = (this.#byteBuffer[pos] & ~mask) | ((value << (8 - bitEnd)) & mask);
+        this.#wordBuffer[pos] = (this.#wordBuffer[pos] & ~mask) | ((value << (8 - bitEnd)) & mask);
       }
       return;
     }
@@ -146,11 +146,11 @@ export class BitArray implements Iterable<Bit> {
       const bitStart = oldLength - pos * 8;
       if (bitStart < 8) {
         const mask = (1 << (8 - bitStart)) - 1;
-        this.#byteBuffer[pos] = (this.#byteBuffer[pos] & ~mask) | ((value >>> (lengthToAdd - (8 - bitStart))) & mask);
+        this.#wordBuffer[pos] = (this.#wordBuffer[pos] & ~mask) | ((value >>> (lengthToAdd - (8 - bitStart))) & mask);
       }
     }
     for (let pos = byteStart; pos < byteEnd; pos++) {
-      this.#byteBuffer[pos] = value >>> (newLength - (pos * 8 + 8));
+      this.#wordBuffer[pos] = value >>> (newLength - (pos * 8 + 8));
     }
     {
       // Copy bits at the end
@@ -159,7 +159,7 @@ export class BitArray implements Iterable<Bit> {
       const bitEnd = newLength - pos * 8;
       if (bitEnd > 0) {
         const mask = 256 - (1 << (8 - bitEnd));
-        this.#byteBuffer[pos] = (this.#byteBuffer[pos] & ~mask) | ((value << (8 - bitEnd)) & mask);
+        this.#wordBuffer[pos] = (this.#wordBuffer[pos] & ~mask) | ((value << (8 - bitEnd)) & mask);
       }
     }
   }
@@ -168,12 +168,12 @@ export class BitArray implements Iterable<Bit> {
     if (!this.#growable) {
       throw new TypeError("Cannot use #reserve() on a non-growable BitArray");
     }
-    if (demand <= this.#byteBuffer.length * 8) {
+    if (demand <= this.#wordBuffer.length * 8) {
       return;
     }
-    const newByteCapacity = Math.max(Math.ceil(demand / 8), this.#byteBuffer.length * 2);
-    const newArrayBuffer = this.#byteBuffer.buffer.transferToFixedLength(newByteCapacity);
-    this.#byteBuffer = new Uint8Array(newArrayBuffer);
+    const newByteCapacity = Math.max(Math.ceil(demand / 8), this.#wordBuffer.length * 2);
+    const newArrayBuffer = this.#wordBuffer.buffer.transferToFixedLength(newByteCapacity);
+    this.#wordBuffer = new Uint8Array(newArrayBuffer);
   }
 
   #isValidIndex(index: number): boolean {

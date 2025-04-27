@@ -92,15 +92,79 @@ export class BitArray implements Iterable<Bit> {
     }
   }
 
+  #get32Full(wordIndex: number): number {
+    return this.#wordBuffer.getUint32(wordIndex);
+  }
+  #get32(wordIndex: number, mask: number): number {
+    return this.#wordBuffer.getUint32(wordIndex) & mask;
+  }
+  #set32Full(wordIndex: number, value: number): void {
+    this.#wordBuffer.setUint32(wordIndex, value);
+  }
+  #set32(wordIndex: number, mask: number, value: number): void {
+    const currentWord = this.#wordBuffer.getUint32(wordIndex);
+    const updatedWord = (currentWord & ~mask) | (value & mask);
+    this.#wordBuffer.setUint32(wordIndex, updatedWord);
+  }
+  #getNumberAbs(start: number, end: number): number {
+    let value = 0;
+    if ((start & 31) && ((start >> 5) << 5) + 32 <= end) {
+      const newStart = ((start >> 5) << 5) + 32;
+      value |= this.#get32(start >> 5, rangeMask(newStart - start, 0)) << (end - newStart);
+      start = newStart;
+    }
+    while (start + 32 <= end) {
+      const newStart = start + 32;
+      value |= this.#get32Full(start >> 5) << (end - newStart);
+      start = newStart;
+    }
+    if (start < end) {
+      const ceilStart = ((start >> 5) << 5) + 32;
+      value |= this.#get32(start >> 5, rangeMask(ceilStart - start, ceilStart - end)) >>> (ceilStart - end);
+    }
+    return value >>> 0;
+  }
+  #setNumberAbs(start: number, end: number, value: number): void {
+    if ((start & 31) && ((start >> 5) << 5) + 32 <= end) {
+      const newStart = ((start >> 5) << 5) + 32;
+      this.#set32(start >> 5, rangeMask(newStart - start, 0), value >>> (end - newStart));
+      start = newStart;
+    }
+    while (start + 32 <= end) {
+      const newStart = start + 32;
+      this.#set32Full(start >> 5, value >>> (end - newStart));
+      start = newStart;
+    }
+    if (start < end) {
+      const ceilStart = ((start >> 5) << 5) + 32;
+      this.#set32(start >> 5, rangeMask(ceilStart - start, ceilStart - end), value << (ceilStart - end));
+    }
+  }
+
   getAt(index: number): Bit {
+    index = Math.trunc(index);
     if (!this.#isValidIndex(index)) {
       return undefined as unknown as Bit;
     }
     const abs = this.#bitOffset + index;
     return ((this.#wordBuffer.getUint32(abs >> 5) >> (31 - (abs & 31))) & 1) as Bit;
+    const [absWord, absInWord] = splitIndex32(this.#bitOffset + index);
+    return lsb(this.#get32Full(absWord) >> (31 - absInWord));
+  }
+
+  getNumber(index: number, length: number): number {
+    index = Math.trunc(index);
+    length = Math.trunc(length);
+    if (index < 0 || length < 0 || index + length > this.#bitLength) {
+      throw new RangeError("Index out of bounds");
+    } else if (length > 32) {
+      throw new RangeError("Length too large for number");
+    }
+    return this.#getNumberAbs(this.#bitOffset + index, this.#bitOffset + index + length);
   }
 
   setAt(index: number, value: BitLike): void {
+    index = Math.trunc(index);
     if (!this.#isValidIndex(index)) {
       return;
     }
@@ -110,6 +174,17 @@ export class BitArray implements Iterable<Bit> {
     } else {
       this.#wordBuffer.setUint32(abs >> 5, this.#wordBuffer.getUint32(abs >> 5) & ~(1 << (31 - (abs & 31))));
     }
+  }
+
+  setNumber(index: number, length: number, value: number): void {
+    index = Math.trunc(index);
+    length = Math.trunc(length);
+    if (index < 0 || length < 0 || index + length > this.#bitLength) {
+      throw new RangeError("Index out of bounds");
+    } else if (length > 32) {
+      throw new RangeError("Length too large for number");
+    }
+    this.#setNumberAbs(this.#bitOffset + index, this.#bitOffset + index + length, value);
   }
 
   push(...bits: BitLike[]): void {
@@ -230,4 +305,15 @@ export class BitArray implements Iterable<Bit> {
 
 function byteSizeFor(bitLength: number): number {
   return Math.ceil(bitLength / UNIT_BIT_LENGTH) * UNIT_BYTE_LENGTH;
+}
+
+function splitIndex32(index: number): [number, number] {
+  return [index >> 5, index & 31];
+}
+
+function lsb(value: number): Bit {
+  return (value & 1) as Bit;
+}
+function rangeMask(length: number, subLength: number): number {
+  return (length === 32 ? (2 ** 32) : (1 << length)) - (1 << subLength);
 }

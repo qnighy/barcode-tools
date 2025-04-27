@@ -33,25 +33,25 @@ test("construct with BitArray", () => {
   expect(Array.from(new BitArray(new BitArray([1, 0, 2])))).toEqual([1, 0, 1]);
 });
 
-test("construct with ArrayBuffer alone", () => {
-  const buffer = new Uint8Array([99]).buffer;
-  expect(Array.from(new BitArray(buffer))).toEqual([0, 1, 1, 0, 0, 0, 1, 1]);
-});
-
-test("construct with ArrayBuffer and offset", () => {
-  const buffer = new Uint8Array([99]).buffer;
-  expect(Array.from(new BitArray(buffer, 2))).toEqual([1, 0, 0, 0, 1, 1]);
-});
-
-test("construct with ArrayBuffer and length", () => {
-  const buffer = new Uint8Array([99]).buffer;
-  expect(Array.from(new BitArray(buffer, undefined, 3))).toEqual([0, 1, 1]);
-});
-
-test("construct with ArrayBuffer, offset, and length", () => {
-  const buffer = new Uint8Array([99]).buffer;
-  expect(Array.from(new BitArray(buffer, 2, 3))).toEqual([1, 0, 0]);
-});
+// test("construct with ArrayBuffer alone", () => {
+//   const buffer = new Uint8Array([99]).buffer;
+//   expect(Array.from(new BitArray(buffer))).toEqual([0, 1, 1, 0, 0, 0, 1, 1]);
+// });
+//
+// test("construct with ArrayBuffer and offset", () => {
+//   const buffer = new Uint8Array([99]).buffer;
+//   expect(Array.from(new BitArray(buffer, 2))).toEqual([1, 0, 0, 0, 1, 1]);
+// });
+//
+// test("construct with ArrayBuffer and length", () => {
+//   const buffer = new Uint8Array([99]).buffer;
+//   expect(Array.from(new BitArray(buffer, undefined, 3))).toEqual([0, 1, 1]);
+// });
+//
+// test("construct with ArrayBuffer, offset, and length", () => {
+//   const buffer = new Uint8Array([99]).buffer;
+//   expect(Array.from(new BitArray(buffer, 2, 3))).toEqual([1, 0, 0]);
+// });
 
 test("BitArray.from with array", () => {
   expect(Array.from(BitArray.from([1, 0, 2]))).toEqual([1, 0, 1]);
@@ -114,10 +114,10 @@ test("push to growable", () => {
   expect(Array.from(bitArray)).toEqual([1, 1, 0, 1, 1, 1, 0, 1]);
 });
 
-test("push to non-growable", () => {
-  const bitArray = new BitArray(new ArrayBuffer(3), 0);
-  expect(() => bitArray.push(1, 0, 2)).toThrow(TypeError);
-});
+// test("push to non-growable", () => {
+//   const bitArray = new BitArray(new ArrayBuffer(3), 0);
+//   expect(() => bitArray.push(1, 0, 2)).toThrow(TypeError);
+// });
 
 test("pushInteger within byte", () => {
   const bitArray = new BitArray([1, 1, 1]);

@@ -1,15 +1,20 @@
 export type Bit = 0 | 1;
 export type BitLike = number | boolean;
+const UNIT_BIT_LENGTH = 32;
+const UNIT_BYTE_LENGTH = 8;
 export class BitArray implements Iterable<Bit> {
   #wordBuffer: DataView<ArrayBuffer>;
   #growable: boolean = false;
   #bitOffset: number;
   #bitLength: number;
 
+  static readonly UNIT_BIT_LENGTH: number = UNIT_BIT_LENGTH;
+  static readonly UNIT_BYTE_LENGTH: number = UNIT_BYTE_LENGTH;
+
   constructor();
   constructor(length: number);
   constructor(source: ArrayLike<BitLike> | Iterable<BitLike>);
-  constructor(buffer: ArrayBuffer, bitOffset?: number | undefined, bigLength?: number);
+  constructor(buffer: ArrayBuffer, bitOffset?: number | undefined, bitLength?: number);
   constructor(
     source: ArrayLike<BitLike> | Iterable<BitLike> | ArrayBuffer | number = 0,
     bitOffset: number | undefined = undefined,
@@ -20,11 +25,14 @@ export class BitArray implements Iterable<Bit> {
       if (length < 0) {
         throw new RangeError("Length must be non-negative");
       }
-      this.#wordBuffer = new DataView(new ArrayBuffer(Math.ceil(length / 8)));
+      this.#wordBuffer = new DataView(new ArrayBuffer(Math.ceil(length / UNIT_BIT_LENGTH) * UNIT_BYTE_LENGTH));
       this.#growable = true;
       this.#bitOffset = 0;
       this.#bitLength = length;
     } else if (source instanceof ArrayBuffer) {
+      if (source.byteLength % UNIT_BYTE_LENGTH) {
+        throw new RangeError(`Buffer length must be a multiple of ${UNIT_BYTE_LENGTH}`);
+      }
       this.#wordBuffer = new DataView(source);
       this.#growable = bitOffset == null;
       bitOffset = Math.trunc(bitOffset ?? 0);
@@ -53,9 +61,9 @@ export class BitArray implements Iterable<Bit> {
   }
 
   #initFrom(source: ArrayLike<BitLike> | Iterable<BitLike>): void {
-    if (#wordBuffer in source && source.#bitOffset % 8 === 0) {
+    if (#wordBuffer in source && source.#bitOffset % UNIT_BIT_LENGTH === 0) {
       // Use slice rather than subarray to get a new buffer
-      this.#wordBuffer = new DataView(new Uint8Array(source.#wordBuffer.buffer).slice(source.#bitOffset >> 3, Math.ceil((source.#bitLength + source.#bitOffset) / 8)).buffer);
+      this.#wordBuffer = new DataView(new Uint32Array(source.#wordBuffer.buffer).slice(source.#bitOffset / UNIT_BIT_LENGTH, Math.ceil((source.#bitLength + source.#bitOffset) / UNIT_BIT_LENGTH)).buffer);
       this.#growable = true;
       this.#bitOffset = 0;
       this.#bitLength = source.#bitLength;
@@ -74,7 +82,7 @@ export class BitArray implements Iterable<Bit> {
       if (length < 0) {
         throw new RangeError("Length must be non-negative");
       }
-      this.#wordBuffer = new DataView(new ArrayBuffer(Math.ceil(length / 8)));
+      this.#wordBuffer = new DataView(new ArrayBuffer(Math.ceil(length / UNIT_BIT_LENGTH) * UNIT_BYTE_LENGTH));
       this.#growable = true;
       this.#bitOffset = 0;
       this.#bitLength = length;
@@ -89,7 +97,7 @@ export class BitArray implements Iterable<Bit> {
       return undefined as unknown as Bit;
     }
     const abs = this.#bitOffset + index;
-    return ((this.#wordBuffer.getUint8(abs >> 3) >> (7 - (abs & 7))) & 1) as Bit;
+    return ((this.#wordBuffer.getUint32(abs >> 5) >> (31 - (abs & 31))) & 1) as Bit;
   }
 
   setAt(index: number, value: BitLike): void {
@@ -98,9 +106,9 @@ export class BitArray implements Iterable<Bit> {
     }
     const abs = this.#bitOffset + index;
     if (value) {
-      this.#wordBuffer.setUint8(abs >> 3, this.#wordBuffer.getUint8(abs >> 3) | (1 << (7 - (abs & 7))));
+      this.#wordBuffer.setUint32(abs >> 5, this.#wordBuffer.getUint32(abs >> 5) | (1 << (31 - (abs & 31))));
     } else {
-      this.#wordBuffer.setUint8(abs >> 3, this.#wordBuffer.getUint8(abs >> 3) & ~(1 << (7 - (abs & 7))));
+      this.#wordBuffer.setUint32(abs >> 5, this.#wordBuffer.getUint32(abs >> 5) & ~(1 << (31 - (abs & 31))));
     }
   }
 
@@ -126,40 +134,40 @@ export class BitArray implements Iterable<Bit> {
     const newLength = oldLength + lengthToAdd;
     this.#reserve(newLength);
     this.#bitLength = newLength;
-    const byteStart = Math.ceil(oldLength / 8);
-    const byteEnd = Math.floor(newLength / 8);
+    const byteStart = Math.ceil(oldLength / 32);
+    const byteEnd = Math.floor(newLength / 32);
     if (byteStart > byteEnd) {
       const pos = byteStart - 1;
-      // Both values between 1 and 7 (inclusive)
-      const bitStart = oldLength - pos * 8;
-      const bitEnd = newLength - pos * 8;
+      // Both values between 1 and 31 (inclusive)
+      const bitStart = oldLength - pos * 32;
+      const bitEnd = newLength - pos * 32;
       if (bitStart < bitEnd) {
-        const mask = (1 << (8 - bitStart)) - (1 << (8 - bitEnd));
-        this.#wordBuffer.setUint8(pos, (this.#wordBuffer.getUint8(pos) & ~mask) | ((value << (8 - bitEnd)) & mask));
+        const mask = (1 << (32 - bitStart)) - (1 << (32 - bitEnd));
+        this.#wordBuffer.setUint32(pos, (this.#wordBuffer.getUint32(pos) & ~mask) | ((value << (32 - bitEnd)) & mask));
       }
       return;
     }
     {
       // Copy bits at the start
       const pos = byteStart - 1;
-      // bitStart is between 1 and 8 (inclusive)
-      const bitStart = oldLength - pos * 8;
-      if (bitStart < 8) {
-        const mask = (1 << (8 - bitStart)) - 1;
-        this.#wordBuffer.setUint8(pos, (this.#wordBuffer.getUint8(pos) & ~mask) | ((value >>> (lengthToAdd - (8 - bitStart))) & mask));
+      // bitStart is between 1 and 32 (inclusive)
+      const bitStart = oldLength - pos * 32;
+      if (bitStart < 32) {
+        const mask = (1 << (32 - bitStart)) - 1;
+        this.#wordBuffer.setUint32(pos, (this.#wordBuffer.getUint32(pos) & ~mask) | ((value >>> (lengthToAdd - (32 - bitStart))) & mask));
       }
     }
     for (let pos = byteStart; pos < byteEnd; pos++) {
-      this.#wordBuffer.setUint8(pos, value >>> (newLength - (pos * 8 + 8)));
+      this.#wordBuffer.setUint32(pos, value >>> (newLength - (pos * 32 + 32)));
     }
     {
       // Copy bits at the end
       const pos = byteEnd;
-      // bitEnd is between 0 and 7 (inclusive)
-      const bitEnd = newLength - pos * 8;
+      // bitEnd is between 0 and 31 (inclusive)
+      const bitEnd = newLength - pos * 32;
       if (bitEnd > 0) {
-        const mask = 256 - (1 << (8 - bitEnd));
-        this.#wordBuffer.setUint8(pos, (this.#wordBuffer.getUint8(pos) & ~mask) | ((value << (8 - bitEnd)) & mask));
+        const mask = -(1 << (32 - bitEnd));
+        this.#wordBuffer.setUint32(pos, (this.#wordBuffer.getUint32(pos) & ~mask) | ((value << (32 - bitEnd)) & mask));
       }
     }
   }
@@ -171,7 +179,7 @@ export class BitArray implements Iterable<Bit> {
     if (demand <= this.#wordBuffer.byteLength * 8) {
       return;
     }
-    const newByteCapacity = Math.max(Math.ceil(demand / 8), this.#wordBuffer.byteLength * 2);
+    const newByteCapacity = Math.max(Math.ceil(demand / UNIT_BIT_LENGTH) * UNIT_BYTE_LENGTH, this.#wordBuffer.byteLength * 2);
     const newArrayBuffer = this.#wordBuffer.buffer.transferToFixedLength(newByteCapacity);
     this.#wordBuffer = new DataView(newArrayBuffer);
   }

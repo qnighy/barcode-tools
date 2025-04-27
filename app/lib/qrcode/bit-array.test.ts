@@ -1,9 +1,19 @@
 import { fc, test } from "@fast-check/vitest";
 import { expect } from "vitest";
-import { BitArray } from "./bit-array";
+import { Bit, BitArray } from "./bit-array";
 
-function bits(): fc.Arbitrary<BitArray> {
-  return fc.array(fc.integer({ min: 0, max: 1 }), { maxLength: 32 }).chain((bits) => fc.constant(BitArray.from(bits)));
+const bit = fc.integer({ min: 0, max: 1 }) as fc.Arbitrary<Bit>;
+function bits({
+  minLength = 0,
+  maxLength = 256,
+}: {
+  minLength?: number;
+  maxLength?: number;
+} = {}): fc.Arbitrary<Bit[]> {
+  return fc.array(bit, {
+    minLength,
+    maxLength,
+  });
 }
 
 test("construct with no argument", () => {
@@ -83,11 +93,25 @@ test("BitArray.from with BitArray", () => {
 });
 
 test.prop([bits(), fc.nat(), fc.nat()])("getNumber", (bits, start_, len_) => {
+  const bitArray = new BitArray(bits);
   const start = start_ % (bits.length + 1);
-  const len = len_ % (bits.length + 1 - start);
-  const expected = parseInt("0" + Array.from(bits).slice(start, start + len).join(""), 2);
-  const actual = bits.getNumber(start, len);
+  const len = Math.min(len_ % (bits.length + 1 - start), 32);
+  const expected = parseInt("0" + bits.slice(start, start + len).join(""), 2);
+  const actual = bitArray.getNumber(start, len);
   expect(actual).toEqual(expected);
+});
+
+test.prop([bits(), fc.nat(), fc.nat(), fc.nat({ max: 2 ** 32 - 1 })])("setNumber", (bits, start_, len_, value_) => {
+  const bitArray = new BitArray(bits);
+  const start = start_ % (bits.length + 1);
+  const len = Math.min(len_ % (bits.length + 1 - start), 32);
+  const value = value_ % (2 ** len);
+
+  bitArray.setNumber(start, len, value);
+  for (let i = 0; i < len; i++) {
+    bits[start + i] = ((value >> (len - 1 - i)) & 1) as Bit;
+  }
+  expect(Array.from(bitArray)).toEqual(bits);
 });
 
 test("getAt in-range", () => {

@@ -25,7 +25,7 @@ export class BitArray implements Iterable<Bit> {
       if (length < 0) {
         throw new RangeError("Length must be non-negative");
       }
-      this.#wordBuffer = new DataView(new ArrayBuffer(Math.ceil(length / UNIT_BIT_LENGTH) * UNIT_BYTE_LENGTH));
+      this.#wordBuffer = new DataView(new ArrayBuffer(byteSizeFor(length)));
       this.#growable = true;
       this.#bitOffset = 0;
       this.#bitLength = length;
@@ -82,7 +82,7 @@ export class BitArray implements Iterable<Bit> {
       if (length < 0) {
         throw new RangeError("Length must be non-negative");
       }
-      this.#wordBuffer = new DataView(new ArrayBuffer(Math.ceil(length / UNIT_BIT_LENGTH) * UNIT_BYTE_LENGTH));
+      this.#wordBuffer = new DataView(new ArrayBuffer(byteSizeFor(length)));
       this.#growable = true;
       this.#bitOffset = 0;
       this.#bitLength = length;
@@ -179,7 +179,7 @@ export class BitArray implements Iterable<Bit> {
     if (demand <= this.#wordBuffer.byteLength * 8) {
       return;
     }
-    const newByteCapacity = Math.max(Math.ceil(demand / UNIT_BIT_LENGTH) * UNIT_BYTE_LENGTH, this.#wordBuffer.byteLength * 2);
+    const newByteCapacity = Math.max(byteSizeFor(demand), this.#wordBuffer.byteLength * 2);
     const newArrayBuffer = this.#wordBuffer.buffer.transferToFixedLength(newByteCapacity);
     this.#wordBuffer = new DataView(newArrayBuffer);
   }
@@ -226,4 +226,8 @@ export class BitArray implements Iterable<Bit> {
     }
     return result;
   }
+}
+
+function byteSizeFor(bitLength: number): number {
+  return Math.ceil(bitLength / UNIT_BIT_LENGTH) * UNIT_BYTE_LENGTH;
 }

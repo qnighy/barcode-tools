@@ -214,56 +214,6 @@ export class BitArray implements Iterable<Bit> {
     this.setNumber(oldLength, length, value);
   }
 
-  pushInteger(value: number, lengthToAdd: number): void {
-    if (!this.#growable) {
-      throw new TypeError("Cannot push to a non-growable BitArray");
-    }
-    lengthToAdd = Math.trunc(lengthToAdd);
-    if (lengthToAdd < 0) {
-      throw new RangeError("Length must be non-negative");
-    }
-    const oldLength = this.#bitLength;
-    const newLength = oldLength + lengthToAdd;
-    this.#reserve(newLength);
-    this.#bitLength = newLength;
-    const byteStart = Math.ceil(oldLength / 32);
-    const byteEnd = Math.floor(newLength / 32);
-    if (byteStart > byteEnd) {
-      const pos = byteStart - 1;
-      // Both values between 1 and 31 (inclusive)
-      const bitStart = oldLength - pos * 32;
-      const bitEnd = newLength - pos * 32;
-      if (bitStart < bitEnd) {
-        const mask = (1 << (32 - bitStart)) - (1 << (32 - bitEnd));
-        this.#wordBuffer.setUint32(pos, (this.#wordBuffer.getUint32(pos) & ~mask) | ((value << (32 - bitEnd)) & mask));
-      }
-      return;
-    }
-    {
-      // Copy bits at the start
-      const pos = byteStart - 1;
-      // bitStart is between 1 and 32 (inclusive)
-      const bitStart = oldLength - pos * 32;
-      if (bitStart < 32) {
-        const mask = (1 << (32 - bitStart)) - 1;
-        this.#wordBuffer.setUint32(pos, (this.#wordBuffer.getUint32(pos) & ~mask) | ((value >>> (lengthToAdd - (32 - bitStart))) & mask));
-      }
-    }
-    for (let pos = byteStart; pos < byteEnd; pos++) {
-      this.#wordBuffer.setUint32(pos, value >>> (newLength - (pos * 32 + 32)));
-    }
-    {
-      // Copy bits at the end
-      const pos = byteEnd;
-      // bitEnd is between 0 and 31 (inclusive)
-      const bitEnd = newLength - pos * 32;
-      if (bitEnd > 0) {
-        const mask = -(1 << (32 - bitEnd));
-        this.#wordBuffer.setUint32(pos, (this.#wordBuffer.getUint32(pos) & ~mask) | ((value << (32 - bitEnd)) & mask));
-      }
-    }
-  }
-
   #reserve(demand: number): void {
     if (!this.#growable) {
       throw new TypeError("Cannot use #reserve() on a non-growable BitArray");

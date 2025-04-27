@@ -14,6 +14,6 @@ export function encodeDigits(text: string, buf: BitArray): void {
     const charLength = Math.min(3, text.length - i);
     const bitLength = [0, 4, 7, 10][charLength];
     const packedValue = parseInt(text.slice(i, i + 3), 10);
-    buf.pushInteger(packedValue, bitLength);
+    buf.pushNumber(packedValue, bitLength);
   }
 }

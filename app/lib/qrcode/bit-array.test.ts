@@ -101,7 +101,8 @@ test.prop([bits(), fc.nat(), fc.nat()])("getNumber", (bits, start_, len_) => {
   expect(actual).toEqual(expected);
 });
 
-test.prop([bits(), fc.nat(), fc.nat(), fc.nat({ max: 2 ** 32 - 1 })])("setNumber", (bits, start_, len_, value_) => {
+test.prop([bits(), fc.nat(), fc.nat(), fc.nat({ max: 2 ** 32 - 1 })])("setNumber", (bits_, start_, len_, value_) => {
+  const bits = [...bits_];
   const bitArray = new BitArray(bits);
   const start = start_ % (bits.length + 1);
   const len = Math.min(len_ % (bits.length + 1 - start), 32);
@@ -155,6 +156,19 @@ test("push to growable", () => {
 //   const bitArray = new BitArray(new ArrayBuffer(3), 0);
 //   expect(() => bitArray.push(1, 0, 2)).toThrow(TypeError);
 // });
+
+test.prop([bits(), fc.nat({ max: 32 }), fc.nat()])("pushNumber", (bits_, len_, value_) => {
+  const bits = [...bits_];
+  const bitArray = new BitArray(bits);
+  const len = len_ % 33;
+  const value = value_ % (2 ** len);
+
+  bitArray.pushNumber(value, len);
+  for (let i = 0; i < len; i++) {
+    bits.push(((value >> (len - 1 - i)) & 1) as Bit);
+  }
+  expect(Array.from(bitArray)).toEqual(bits);
+});
 
 test("pushInteger within byte", () => {
   const bitArray = new BitArray([1, 1, 1]);

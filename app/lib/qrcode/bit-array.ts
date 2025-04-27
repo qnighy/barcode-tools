@@ -97,18 +97,18 @@ export class BitArray implements Iterable<Bit> {
   }
 
   #get32Full(wordIndex: number): number {
-    return this.#wordBuffer.getUint32(wordIndex);
+    return this.#wordBuffer.getUint32(wordIndex << 2);
   }
   #get32(wordIndex: number, mask: number): number {
-    return this.#wordBuffer.getUint32(wordIndex) & mask;
+    return this.#wordBuffer.getUint32(wordIndex << 2) & mask;
   }
   #set32Full(wordIndex: number, value: number): void {
-    this.#wordBuffer.setUint32(wordIndex, value);
+    this.#wordBuffer.setUint32(wordIndex << 2, value);
   }
   #set32(wordIndex: number, mask: number, value: number): void {
-    const currentWord = this.#wordBuffer.getUint32(wordIndex);
+    const currentWord = this.#wordBuffer.getUint32(wordIndex << 2);
     const updatedWord = (currentWord & ~mask) | (value & mask);
-    this.#wordBuffer.setUint32(wordIndex, updatedWord);
+    this.#wordBuffer.setUint32(wordIndex << 2, updatedWord);
   }
   #getNumberAbs(start: number, end: number): number {
     let value = 0;
@@ -151,7 +151,7 @@ export class BitArray implements Iterable<Bit> {
       return undefined as unknown as Bit;
     }
     const abs = this.#bitOffset + index;
-    return ((this.#wordBuffer.getUint32(abs >> 5) >> (31 - (abs & 31))) & 1) as Bit;
+    return ((this.#wordBuffer.getUint32((abs >> 5) << 2) >>> (31 - (abs & 31))) & 1) as Bit;
   }
 
   getNumber(index: number, length: number): number {
@@ -172,9 +172,9 @@ export class BitArray implements Iterable<Bit> {
     }
     const abs = this.#bitOffset + index;
     if (value) {
-      this.#wordBuffer.setUint32(abs >> 5, this.#wordBuffer.getUint32(abs >> 5) | (1 << (31 - (abs & 31))));
+      this.#wordBuffer.setUint32(abs >> 5, this.#wordBuffer.getUint32((abs >> 5) << 2) | (1 << (31 - (abs & 31))));
     } else {
-      this.#wordBuffer.setUint32(abs >> 5, this.#wordBuffer.getUint32(abs >> 5) & ~(1 << (31 - (abs & 31))));
+      this.#wordBuffer.setUint32(abs >> 5, this.#wordBuffer.getUint32((abs >> 5) << 2) & ~(1 << (31 - (abs & 31))));
     }
   }
 
@@ -197,6 +197,21 @@ export class BitArray implements Iterable<Bit> {
     for (const bit of bits) {
       this.setAt(this.#bitLength++, bit);
     }
+  }
+
+  pushNumber(value: number, length: number): void {
+    if (!this.#growable) {
+      throw new TypeError("Cannot push to a non-growable BitArray");
+    }
+    length = Math.trunc(length);
+    if (length < 0) {
+      throw new RangeError("Length must be non-negative");
+    }
+    const oldLength = this.#bitLength;
+    const newLength = oldLength + length;
+    this.#reserve(newLength);
+    this.#bitLength = newLength;
+    this.setNumber(oldLength, length, value);
   }
 
   pushInteger(value: number, lengthToAdd: number): void {

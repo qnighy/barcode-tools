@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { bitPositions } from "./layout";
+import { SPECS, VERSIONS } from "./specs";
 
 function renderBitPositionsA(iter: IterableIterator<[number, number]>): (number | null)[][] {
   const positions = [...iter];
@@ -162,3 +163,36 @@ test("bitPositions for Version 7", () => {
     [X,X,X,X,X,X,X,_,o,5,4,7,6,5,4,7,6,5,4,5,4,3,2,5,4,3,2,5,4,3,2,5,4,3,2,1,0,7,6,1,0,7,6,1,0],
  ]);
 });
+
+for (const version of VERSIONS) {
+  test(`bitPositions value range for version ${version}`, () => {
+    const { width } = SPECS[version];
+    const violations: [number, number][] = [];
+    for (const [x, y] of bitPositions(version)) {
+      if (x < 0 || x >= width || y < 0 || y >= width) {
+        violations.push([x, y]);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  test(`bitPositions uniqueness for version ${version}`, () => {
+    const set = new Set<string>();
+    const duplicated = new Set<string>();
+    for (const [x, y] of bitPositions(version)) {
+      const s = `${x},${y}`;
+      if (set.has(s)) {
+        duplicated.add(s);
+      } else {
+        set.add(s);
+      }
+    }
+    expect(duplicated).toEqual(new Set());
+  });
+
+  test(`bitPositions number match for version ${version}`, () => {
+    const { dataCapacityBits } = SPECS[version];
+    const count = Array.from(bitPositions(version)).length;
+    expect(count).toEqual(dataCapacityBits);
+  });
+}

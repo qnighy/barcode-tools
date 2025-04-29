@@ -89,25 +89,25 @@ const ALIGNMENT_PATTERN_SIZE_MINUS_TIMING = 5 * 4;
 export type CodingVersionSpec = {
   codingVersion: CodingVersion;
   modeIndicatorBits: number;
-  digitModeIndicator: string | null;
-  alphanumericModeIndicator: string | null;
-  byteModeIndicator: string | null;
-  kanjiModeIndicator: string | null;
-  FNC1FirstPositionIndicator: string | null;
-  FNC1SecondPositionIndicator: string | null;
-  ECIModeIndicator: string | null;
-  structuredAppendModeIndicator: string | null;
+  digitModeIndicator: number | null;
+  alphanumericModeIndicator: number | null;
+  byteModeIndicator: number | null;
+  kanjiModeIndicator: number | null;
+  FNC1FirstPositionIndicator: number | null;
+  FNC1SecondPositionIndicator: number | null;
+  ECIModeIndicator: number | null;
+  structuredAppendModeIndicator: number | null;
   digitModeCountBits: number;
   alphanumericModeCountBits: number;
   byteModeCountBits: number;
   kanjiModeCountBits: number;
 };
 
-export const CODING_SPECS: Record<CodingVersion, CodingVersionSpec> = Object.freeze({
+export const CODING_SPECS: Record<CodingVersion, CodingVersionSpec> = Object.freeze<Record<CodingVersion, CodingVersionSpec>>({
   M1: {
     codingVersion: "M1",
     modeIndicatorBits: 0,
-    digitModeIndicator: "",
+    digitModeIndicator: 0,
     alphanumericModeIndicator: null,
     byteModeIndicator: null,
     kanjiModeIndicator: null,
@@ -123,8 +123,8 @@ export const CODING_SPECS: Record<CodingVersion, CodingVersionSpec> = Object.fre
   M2: {
     codingVersion: "M2",
     modeIndicatorBits: 1,
-    digitModeIndicator: "0",
-    alphanumericModeIndicator: "1",
+    digitModeIndicator: 0b0,
+    alphanumericModeIndicator: 0b1,
     byteModeIndicator: null,
     kanjiModeIndicator: null,
     FNC1FirstPositionIndicator: null,
@@ -139,10 +139,10 @@ export const CODING_SPECS: Record<CodingVersion, CodingVersionSpec> = Object.fre
   M3: {
     codingVersion: "M3",
     modeIndicatorBits: 2,
-    digitModeIndicator: "00",
-    alphanumericModeIndicator: "01",
-    byteModeIndicator: "10",
-    kanjiModeIndicator: "11",
+    digitModeIndicator: 0b00,
+    alphanumericModeIndicator: 0b01,
+    byteModeIndicator: 0b10,
+    kanjiModeIndicator: 0b11,
     FNC1FirstPositionIndicator: null,
     FNC1SecondPositionIndicator: null,
     ECIModeIndicator: null,
@@ -155,10 +155,10 @@ export const CODING_SPECS: Record<CodingVersion, CodingVersionSpec> = Object.fre
   M4: {
     codingVersion: "M4",
     modeIndicatorBits: 3,
-    digitModeIndicator: "000",
-    alphanumericModeIndicator: "001",
-    byteModeIndicator: "010",
-    kanjiModeIndicator: "011",
+    digitModeIndicator: 0b000,
+    alphanumericModeIndicator: 0b001,
+    byteModeIndicator: 0b010,
+    kanjiModeIndicator: 0b011,
     FNC1FirstPositionIndicator: null,
     FNC1SecondPositionIndicator: null,
     ECIModeIndicator: null,
@@ -171,14 +171,14 @@ export const CODING_SPECS: Record<CodingVersion, CodingVersionSpec> = Object.fre
   9: {
     codingVersion: 9,
     modeIndicatorBits: 4,
-    digitModeIndicator: "0001",
-    alphanumericModeIndicator: "0010",
-    byteModeIndicator: "0100",
-    kanjiModeIndicator: "1000",
-    FNC1FirstPositionIndicator: "0101",
-    FNC1SecondPositionIndicator: "1001",
-    ECIModeIndicator: "0111",
-    structuredAppendModeIndicator: "0011",
+    digitModeIndicator: 0b0001,
+    alphanumericModeIndicator: 0b0010,
+    byteModeIndicator: 0b0100,
+    kanjiModeIndicator: 0b1000,
+    FNC1FirstPositionIndicator: 0b0101,
+    FNC1SecondPositionIndicator: 0b1001,
+    ECIModeIndicator: 0b0111,
+    structuredAppendModeIndicator: 0b0011,
     digitModeCountBits: 10,
     alphanumericModeCountBits: 9,
     byteModeCountBits: 8,
@@ -187,14 +187,14 @@ export const CODING_SPECS: Record<CodingVersion, CodingVersionSpec> = Object.fre
   26: {
     codingVersion: 26,
     modeIndicatorBits: 4,
-    digitModeIndicator: "0001",
-    alphanumericModeIndicator: "0010",
-    byteModeIndicator: "0100",
-    kanjiModeIndicator: "1000",
-    FNC1FirstPositionIndicator: "0101",
-    FNC1SecondPositionIndicator: "1001",
-    ECIModeIndicator: "0111",
-    structuredAppendModeIndicator: "0011",
+    digitModeIndicator: 0b0001,
+    alphanumericModeIndicator: 0b0010,
+    byteModeIndicator: 0b0100,
+    kanjiModeIndicator: 0b1000,
+    FNC1FirstPositionIndicator: 0b0101,
+    FNC1SecondPositionIndicator: 0b1001,
+    ECIModeIndicator: 0b0111,
+    structuredAppendModeIndicator: 0b0011,
     digitModeCountBits: 12,
     alphanumericModeCountBits: 11,
     byteModeCountBits: 16,
@@ -203,14 +203,14 @@ export const CODING_SPECS: Record<CodingVersion, CodingVersionSpec> = Object.fre
   40: {
     codingVersion: 40,
     modeIndicatorBits: 4,
-    digitModeIndicator: "0001",
-    alphanumericModeIndicator: "0010",
-    byteModeIndicator: "0100",
-    kanjiModeIndicator: "1000",
-    FNC1FirstPositionIndicator: "0101",
-    FNC1SecondPositionIndicator: "1001",
-    ECIModeIndicator: "0111",
-    structuredAppendModeIndicator: "0011",
+    digitModeIndicator: 0b0001,
+    alphanumericModeIndicator: 0b0010,
+    byteModeIndicator: 0b0100,
+    kanjiModeIndicator: 0b1000,
+    FNC1FirstPositionIndicator: 0b0101,
+    FNC1SecondPositionIndicator: 0b1001,
+    ECIModeIndicator: 0b0111,
+    structuredAppendModeIndicator: 0b0011,
     digitModeCountBits: 14,
     alphanumericModeCountBits: 13,
     byteModeCountBits: 16,

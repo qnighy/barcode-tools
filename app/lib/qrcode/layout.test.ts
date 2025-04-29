@@ -33,6 +33,39 @@ const X: null = null;
 const o: null = null;
 const _: null = null;
 
+test("bitPositions for Version M2", () => {
+  expect(renderBitPositionsA(bitPositions("M2"))).toEqual([
+    [X,X,X,X,X,X,X,_,X,_,_,_,_],
+    [X,_,_,_,_,_,X,_,o,3,3,2,2],
+    [X,_,X,X,X,_,X,_,o,3,3,2,2],
+    [X,_,X,X,X,_,X,_,o,3,3,2,2],
+    [X,_,X,X,X,_,X,_,o,3,3,2,2],
+    [X,_,_,_,_,_,X,_,o,4,4,1,1],
+    [X,X,X,X,X,X,X,_,o,4,4,1,1],
+    [_,_,_,_,_,_,_,_,o,4,4,1,1],
+    [X,o,o,o,o,o,o,o,o,4,4,1,1],
+    [_,9,9,8,8,7,7,6,6,5,5,0,0],
+    [_,9,9,8,8,7,7,6,6,5,5,0,0],
+    [_,9,9,8,8,7,7,6,6,5,5,0,0],
+    [_,9,9,8,8,7,7,6,6,5,5,0,0],
+  ]);
+  expect(renderBitPositionsB(bitPositions("M2"))).toEqual([
+    [X,X,X,X,X,X,X,_,X,X,X,X,X],
+    [X,_,_,_,_,_,X,_,o,1,0,7,6],
+    [X,_,X,X,X,_,X,_,o,3,2,5,4],
+    [X,_,X,X,X,_,X,_,o,5,4,3,2],
+    [X,_,X,X,X,_,X,_,o,7,6,1,0],
+    [X,_,_,_,_,_,X,_,o,1,0,7,6],
+    [X,X,X,X,X,X,X,_,o,3,2,5,4],
+    [_,_,_,_,_,_,_,_,o,5,4,3,2],
+    [o,o,o,o,o,o,o,o,o,7,6,1,0],
+    [X,1,0,7,6,1,0,7,6,1,0,7,6],
+    [X,3,2,5,4,3,2,5,4,3,2,5,4],
+    [X,5,4,3,2,5,4,3,2,5,4,3,2],
+    [X,7,6,1,0,7,6,1,0,7,6,1,0],
+  ]);
+});
+
 test("bitPositions for Version 7", () => {
   expect(renderBitPositionsA(bitPositions(7))).toEqual([
     [X,X,X,X,X,X,X,_,o,1,1,1,1,9,9,9,9,7,7,7,7,1,1,0,0,2,2,2,2,0,0,0,0,9,o,o,o,_,X,X,X,X,X,X,X],

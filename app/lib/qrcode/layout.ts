@@ -1,10 +1,29 @@
-import { isMicroQRVersion, QRVersion, SPECS, Version } from "./specs";
+import { isMicroQRVersion, MicroQRVersion, QRVersion, SPECS, Version } from "./specs";
 
 export function bitPositions(version: Version): IterableIterator<[number, number]> {
   if (isMicroQRVersion(version)) {
-    throw new Error("TODO: micro QR bitPositions");
+    return microQrBitPositions(version);
   } else {
     return qrBitPositions(version);
+  }
+}
+
+function* microQrBitPositions(version: MicroQRVersion): IterableIterator<[number, number]> {
+  const versionNumber = Number(version.slice(1));
+  for (let x = 7 + versionNumber * 2; x >= 1; x -= 2) {
+    const minY = x >= 9 ? 1 : 9;
+    const isDescending = (x + versionNumber * 2) % 4 === 1;
+    if (isDescending) {
+      for (let y = minY; y < 9 + versionNumber * 2; y++) {
+        yield [x + 1, y];
+        yield [x, y];
+      }
+    } else {
+      for (let y = 9 + versionNumber * 2 - 1; y >= minY; y--) {
+        yield [x + 1, y];
+        yield [x, y];
+      }
+    }
   }
 }
 

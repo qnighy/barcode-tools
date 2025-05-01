@@ -375,3 +375,34 @@ function writeKanjiChunk(
     bitArray.pushNumber(value, 13);
   }
 }
+
+export function addFiller(
+  bitArray: BitArray,
+  maxBits: number,
+  parameters: CodingParameters
+): void {
+  // Add terminator bits
+  const terminatorBits =
+    parameters.digitModeIndicator === 0
+    ? // Micro QR; the length field should also be 0 so that
+      // we can distinguish between the terminator and the digit mode indicator
+      parameters.modeIndicatorBits + parameters.digitModeCountBits
+    : parameters.modeIndicatorBits;
+  bitArray.pushNumber(0, Math.min(terminatorBits, maxBits - bitArray.length));
+
+  const firstByteBoundary = Math.ceil(bitArray.length / 8) * 8;
+  const lastByteBoundary = Math.floor(maxBits / 8) * 8;
+  if (firstByteBoundary < maxBits) {
+    // Add initial padding bits
+    bitArray.pushNumber(0, firstByteBoundary - bitArray.length);
+    // Add padding codewords
+    while (bitArray.length < lastByteBoundary) {
+      bitArray.pushNumber(0b11101100, 8);
+      if (bitArray.length < lastByteBoundary) {
+        bitArray.pushNumber(0b00010001, 8);
+      }
+    }
+  }
+  // Add final padding bits
+  bitArray.pushNumber(0, maxBits - bitArray.length);
+}

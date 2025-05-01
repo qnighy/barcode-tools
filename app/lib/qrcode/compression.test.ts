@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
-import { CodingParameters, compressBytes } from "./compression";
+import { addFiller, CodingParameters, compressBytes } from "./compression";
+import { BitArray } from "./bit-array";
 
 const M3Parameters: CodingParameters = {
   modeIndicatorBits: 2,
@@ -106,5 +107,139 @@ test("Mixed alphanumerics and digits", () => {
     0, 1, 0, 1, 0, 0, 0, 0, 1, 1,
     0, 1, 1, 1, 1, 1, 0, 1, 0, 1,
     0, 1, 0, 0,
+  ]);
+});
+
+test("addFiller, QR, no terminator", () => {
+  const bits = new BitArray([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  ]);
+  addFiller(bits, 24, V9Parameters);
+  expect([...bits]).toEqual([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  ]);
+});
+
+test("addFiller, QR, short terminator", () => {
+  const bits = new BitArray([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+    1, 1, 1, 1, 1, 1, 1,
+  ]);
+  addFiller(bits, 24, V9Parameters);
+  expect([...bits]).toEqual([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+    1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0,
+  ]);
+});
+
+test("addFiller, QR, exact terminator", () => {
+  const bits = new BitArray([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1
+  ]);
+  addFiller(bits, 32, V9Parameters);
+  expect([...bits]).toEqual([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1,
+    0, 0, 0, 0,
+  ]);
+});
+
+test("addFiller, QR, 0.5-byte excess", () => {
+  const bits = new BitArray([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  ]);
+  addFiller(bits, 32, V9Parameters);
+  expect([...bits]).toEqual([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+  ]);
+});
+
+test("addFiller, QR, 1-byte excess", () => {
+  const bits = new BitArray([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1
+  ]);
+  addFiller(bits, 40, V9Parameters);
+  expect([...bits]).toEqual([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1,
+    0, 0, 0, 0,
+    1, 1, 1, 0, 1, 1, 0, 0,
+  ]);
+});
+
+test("addFiller, QR, 1.5-byte excess", () => {
+  const bits = new BitArray([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  ]);
+  addFiller(bits, 40, V9Parameters);
+  expect([...bits]).toEqual([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    1, 1, 1, 0, 1, 1, 0, 0,
+  ]);
+});
+
+test("addFiller, QR, 2-byte excess", () => {
+  const bits = new BitArray([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1
+  ]);
+  addFiller(bits, 48, V9Parameters);
+  expect([...bits]).toEqual([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1,
+    0, 0, 0, 0,
+    1, 1, 1, 0, 1, 1, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 1,
+  ]);
+});
+
+test("addFiller, QR, 2.5-byte excess", () => {
+  const bits = new BitArray([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  ]);
+  addFiller(bits, 48, V9Parameters);
+  expect([...bits]).toEqual([
+    0, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    1, 1, 1, 0, 1, 1, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 1,
   ]);
 });

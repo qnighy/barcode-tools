@@ -1,7 +1,6 @@
 import { BitArray } from "./bit-array";
 
 export type CodingParameters = {
-  maxBits: number;
   modeIndicatorBits: number;
   digitModeIndicator: number | null;
   alphanumericModeIndicator: number | null;
@@ -24,23 +23,24 @@ export class BitOverflowError extends Error {
     this.prototype.name = "BitOverflowError";
   }
 }
-export function compressBytes(data: Uint8Array, params: CodingParameters): BitArray {
-  return compressBytesImpl(data, params, (bits: number) => {
-    throw new BitOverflowError(`Bit overflow: got ${bits} bits for ${params.maxBits} capacity`);
+export function compressBytes(data: Uint8Array, maxBits: number, params: CodingParameters): BitArray {
+  return compressBytesImpl(data, maxBits, params, (bits: number) => {
+    throw new BitOverflowError(`Bit overflow: got ${bits} bits for ${maxBits} capacity`);
   });
 }
 
-export function maybeCompressBytes(data: Uint8Array, params: CodingParameters): BitArray | null {
-  return compressBytesImpl(data, params, () => null);
+export function maybeCompressBytes(data: Uint8Array, maxBits: number, params: CodingParameters): BitArray | null {
+  return compressBytesImpl(data, maxBits, params, () => null);
 }
 
 export function compressBytesImpl<T>(
   data: Uint8Array,
+  maxBits: number,
   params: CodingParameters,
   onOverflow: (bits: number) => T
 ): BitArray | T {
   const finalNode = computeOptimumPath(data, params);
-  if (finalNode.cost / BIT_COST > params.maxBits) {
+  if (finalNode.cost / BIT_COST > maxBits) {
     return onOverflow(finalNode.cost / BIT_COST);
   }
 

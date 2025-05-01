@@ -3,10 +3,10 @@ import { BitArray } from "./bit-array";
 export type CodingParameters = {
   maxBits: number;
   modeIndicatorBits: number;
-  digitModeIndicator: number;
-  alphanumericModeIndicator: number;
-  byteModeIndicator: number;
-  kanjiModeIndicator: number;
+  digitModeIndicator: number | null;
+  alphanumericModeIndicator: number | null;
+  byteModeIndicator: number | null;
+  kanjiModeIndicator: number | null;
   digitModeCountBits: number;
   alphanumericModeCountBits: number;
   byteModeCountBits: number;
@@ -271,6 +271,9 @@ function writeDigitChunk(
   data: Uint8Array,
   params: CodingParameters
 ): void {
+  if (params.digitModeIndicator == null) {
+    throw new TypeError("digitModeIndicator is null");
+  }
   bitArray.pushNumber(params.digitModeIndicator, params.modeIndicatorBits);
   bitArray.pushNumber(modeChunk.end - modeChunk.start, params.digitModeCountBits);
   for (let i = modeChunk.start; i < modeChunk.end; i += 3) {
@@ -297,6 +300,9 @@ function writeAlphanumericChunk(
   data: Uint8Array,
   params: CodingParameters
 ): void {
+  if (params.alphanumericModeIndicator == null) {
+    throw new TypeError("alphanumericModeIndicator is null");
+  }
   bitArray.pushNumber(params.alphanumericModeIndicator, params.modeIndicatorBits);
   bitArray.pushNumber(modeChunk.end - modeChunk.start, params.alphanumericModeCountBits);
   for (let i = modeChunk.start; i < modeChunk.end; i += 2) {
@@ -332,6 +338,9 @@ function writeByteChunk(
   data: Uint8Array,
   params: CodingParameters
 ): void {
+  if (params.byteModeIndicator == null) {
+    throw new TypeError("byteModeIndicator is null");
+  }
   bitArray.pushNumber(params.byteModeIndicator, params.modeIndicatorBits);
   bitArray.pushNumber(modeChunk.end - modeChunk.start, params.byteModeCountBits);
   for (let i = modeChunk.start; i < modeChunk.end; i++) {
@@ -348,6 +357,9 @@ function writeKanjiChunk(
 ): void {
   if ((modeChunk.end - modeChunk.start) % 2 !== 0) {
     throw new RangeError("Kanji chunk must have an even number of bytes");
+  }
+  if (params.kanjiModeIndicator == null) {
+    throw new TypeError("kanjiModeIndicator is null");
   }
   bitArray.pushNumber(params.kanjiModeIndicator, params.modeIndicatorBits);
   bitArray.pushNumber((modeChunk.end - modeChunk.start) / 2, params.kanjiModeCountBits);

@@ -1,6 +1,6 @@
 import { fc, test } from "@fast-check/vitest";
 import { expect } from "vitest";
-import { BitWriter } from "./bit-writer";
+import { Bits, BitWriter } from "./bit-writer";
 
 type Chunk = {
   value: number;
@@ -14,6 +14,35 @@ function chunk(): fc.Arbitrary<Chunk> {
 function chunks(): fc.Arbitrary<Chunk[]> {
   return fc.array(chunk(), { minLength: 0, maxLength: 100 });
 }
+function bitsObj(): fc.Arbitrary<Bits> {
+  return fc.tuple(
+    fc.uint8Array({ minLength: 0, maxLength: 100 }),
+    fc.integer({ min: 0, max: 7 })
+  ).map<Bits>(([bytes, excessBits]) => {
+    if (bytes.length === 0 || excessBits === 0) {
+      return {
+        bitLength: bytes.length * 8,
+        bytes,
+      };
+    } else {
+      const newBytes = bytes.slice();
+      newBytes[newBytes.length - 1] &= -(1 << (8 - excessBits));
+      return {
+        bitLength: newBytes.length * 8 - 8 + excessBits,
+        bytes: newBytes,
+      };
+    }
+  });
+}
+
+test.prop([bitsObj()])("create from Bits and then transferToBytes", (bits) => {
+  const bitsCopy: Bits = {
+    bitLength: bits.bitLength,
+    bytes: new Uint8Array(bits.bytes),
+  };
+  const actual = new BitWriter(bitsCopy).transferToBytes();
+  expect(actual).toEqual(bits);
+});
 
 test.prop([chunks()])("pushNumber", (chunks) => {
   const writer = new BitWriter();
@@ -37,6 +66,9 @@ test.prop([chunks()])("pushNumber", (chunks) => {
     }
     expectedBytes.push(byte);
   }
-  const actualBytes = writer.transferToBytes();
-  expect(actualBytes).toEqual(new Uint8Array(expectedBytes));
+  const actual = writer.transferToBytes();
+  expect(actual).toEqual({
+    bitLength: expectedBits.length,
+    bytes: new Uint8Array(expectedBytes),
+  } satisfies Bits);
 });

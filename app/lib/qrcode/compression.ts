@@ -1,4 +1,4 @@
-import { BitArray } from "./bit-array";
+import { BitWriter } from "./bit-writer";
 
 export type CodingParameters = {
   modeIndicatorBits: number;
@@ -23,13 +23,13 @@ export class BitOverflowError extends Error {
     this.prototype.name = "BitOverflowError";
   }
 }
-export function compressBytes(data: Uint8Array, maxBits: number, params: CodingParameters): BitArray {
+export function compressBytes(data: Uint8Array, maxBits: number, params: CodingParameters): BitWriter {
   return compressBytesImpl(data, maxBits, params, (bits: number) => {
     throw new BitOverflowError(`Bit overflow: got ${bits} bits for ${maxBits} capacity`);
   });
 }
 
-export function maybeCompressBytes(data: Uint8Array, maxBits: number, params: CodingParameters): BitArray | null {
+export function maybeCompressBytes(data: Uint8Array, maxBits: number, params: CodingParameters): BitWriter | null {
   return compressBytesImpl(data, maxBits, params, () => null);
 }
 
@@ -38,7 +38,7 @@ export function compressBytesImpl<T>(
   maxBits: number,
   params: CodingParameters,
   onOverflow: (bits: number) => T
-): BitArray | T {
+): BitWriter | T {
   const finalNode = computeOptimumPath(data, params);
   if (finalNode.cost / BIT_COST > maxBits) {
     return onOverflow(finalNode.cost / BIT_COST);
@@ -46,11 +46,11 @@ export function compressBytesImpl<T>(
 
   const modeChunks = reconstructPath(finalNode);
 
-  const bitArray = new BitArray();
+  const writer = new BitWriter();
   for (const modeChunk of modeChunks) {
-    writeChunk(bitArray, modeChunk, data, params);
+    writeChunk(writer, modeChunk, data, params);
   }
-  return bitArray;
+  return writer;
 }
 
 /**
@@ -242,23 +242,23 @@ function reconstructPath(node: CostNode): ModeChunk[] {
 }
 
 function writeChunk(
-  bitArray: BitArray,
+  writer: BitWriter,
   modeChunk: ModeChunk,
   data: Uint8Array,
   params: CodingParameters
 ): void {
   switch (modeChunk.mode) {
     case "digit":
-      writeDigitChunk(bitArray, modeChunk, data, params);
+      writeDigitChunk(writer, modeChunk, data, params);
       break;
     case "alphanumeric":
-      writeAlphanumericChunk(bitArray, modeChunk, data, params);
+      writeAlphanumericChunk(writer, modeChunk, data, params);
       break;
     case "byte":
-      writeByteChunk(bitArray, modeChunk, data, params);
+      writeByteChunk(writer, modeChunk, data, params);
       break;
     case "kanji":
-      writeKanjiChunk(bitArray, modeChunk, data, params);
+      writeKanjiChunk(writer, modeChunk, data, params);
       break;
     default:
       throw new TypeError(`Unknown mode: ${modeChunk.mode satisfies never}`);
@@ -266,7 +266,7 @@ function writeChunk(
 }
 
 function writeDigitChunk(
-  bitArray: BitArray,
+  writer: BitWriter,
   modeChunk: ModeChunk,
   data: Uint8Array,
   params: CodingParameters
@@ -274,28 +274,28 @@ function writeDigitChunk(
   if (params.digitModeIndicator == null) {
     throw new TypeError("digitModeIndicator is null");
   }
-  bitArray.pushNumber(params.digitModeIndicator, params.modeIndicatorBits);
-  bitArray.pushNumber(modeChunk.end - modeChunk.start, params.digitModeCountBits);
+  writer.pushNumber(params.digitModeIndicator, params.modeIndicatorBits);
+  writer.pushNumber(modeChunk.end - modeChunk.start, params.digitModeCountBits);
   for (let i = modeChunk.start; i < modeChunk.end; i += 3) {
     const size = modeChunk.end - i;
     if (size <= 1) {
       const value = data[i] - 0x30;
-      bitArray.pushNumber(value, 4);
+      writer.pushNumber(value, 4);
     } else if (size <= 2) {
       const value = (data[i] - 0x30) * 10 + (data[i + 1] - 0x30);
-      bitArray.pushNumber(value, 7);
+      writer.pushNumber(value, 7);
     } else {
       const value =
         (data[i] - 0x30) * 100 +
         (data[i + 1] - 0x30) * 10 +
         (data[i + 2] - 0x30);
-      bitArray.pushNumber(value, 10);
+      writer.pushNumber(value, 10);
     }
   }
 }
 
 function writeAlphanumericChunk(
-  bitArray: BitArray,
+  writer: BitWriter,
   modeChunk: ModeChunk,
   data: Uint8Array,
   params: CodingParameters
@@ -303,18 +303,18 @@ function writeAlphanumericChunk(
   if (params.alphanumericModeIndicator == null) {
     throw new TypeError("alphanumericModeIndicator is null");
   }
-  bitArray.pushNumber(params.alphanumericModeIndicator, params.modeIndicatorBits);
-  bitArray.pushNumber(modeChunk.end - modeChunk.start, params.alphanumericModeCountBits);
+  writer.pushNumber(params.alphanumericModeIndicator, params.modeIndicatorBits);
+  writer.pushNumber(modeChunk.end - modeChunk.start, params.alphanumericModeCountBits);
   for (let i = modeChunk.start; i < modeChunk.end; i += 2) {
     const size = modeChunk.end - i;
     if (size <= 1) {
       const value = alphanumericCode(data[i]);
-      bitArray.pushNumber(value, 6);
+      writer.pushNumber(value, 6);
     } else {
       const value =
         alphanumericCode(data[i]) * 45 +
         alphanumericCode(data[i + 1]);
-      bitArray.pushNumber(value, 11);
+      writer.pushNumber(value, 11);
     }
   }
 }
@@ -333,7 +333,7 @@ function alphanumericCode(byte: number): number {
 }
 
 function writeByteChunk(
-  bitArray: BitArray,
+  writer: BitWriter,
   modeChunk: ModeChunk,
   data: Uint8Array,
   params: CodingParameters
@@ -341,16 +341,16 @@ function writeByteChunk(
   if (params.byteModeIndicator == null) {
     throw new TypeError("byteModeIndicator is null");
   }
-  bitArray.pushNumber(params.byteModeIndicator, params.modeIndicatorBits);
-  bitArray.pushNumber(modeChunk.end - modeChunk.start, params.byteModeCountBits);
+  writer.pushNumber(params.byteModeIndicator, params.modeIndicatorBits);
+  writer.pushNumber(modeChunk.end - modeChunk.start, params.byteModeCountBits);
   for (let i = modeChunk.start; i < modeChunk.end; i++) {
     const byte = data[i];
-    bitArray.pushNumber(byte, 8);
+    writer.pushNumber(byte, 8);
   }
 }
 
 function writeKanjiChunk(
-  bitArray: BitArray,
+  writer: BitWriter,
   modeChunk: ModeChunk,
   data: Uint8Array,
   params: CodingParameters
@@ -361,8 +361,8 @@ function writeKanjiChunk(
   if (params.kanjiModeIndicator == null) {
     throw new TypeError("kanjiModeIndicator is null");
   }
-  bitArray.pushNumber(params.kanjiModeIndicator, params.modeIndicatorBits);
-  bitArray.pushNumber((modeChunk.end - modeChunk.start) / 2, params.kanjiModeCountBits);
+  writer.pushNumber(params.kanjiModeIndicator, params.modeIndicatorBits);
+  writer.pushNumber((modeChunk.end - modeChunk.start) / 2, params.kanjiModeCountBits);
   for (let i = modeChunk.start; i < modeChunk.end; i += 2) {
     const byte1 = data[i];
     const byte2 = data[i + 1];
@@ -372,12 +372,12 @@ function writeKanjiChunk(
     } else {
       value = (byte1 - (0xE0 - 31)) * 0xC0 + (byte2 - 0x40);
     }
-    bitArray.pushNumber(value, 13);
+    writer.pushNumber(value, 13);
   }
 }
 
 export function addFiller(
-  bitArray: BitArray,
+  writer: BitWriter,
   maxBits: number,
   parameters: CodingParameters
 ): void {
@@ -388,21 +388,21 @@ export function addFiller(
       // we can distinguish between the terminator and the digit mode indicator
       parameters.modeIndicatorBits + parameters.digitModeCountBits
     : parameters.modeIndicatorBits;
-  bitArray.pushNumber(0, Math.min(terminatorBits, maxBits - bitArray.length));
+  writer.pushNumber(0, Math.min(terminatorBits, maxBits - writer.bitLength));
 
-  const firstByteBoundary = Math.ceil(bitArray.length / 8) * 8;
+  const firstByteBoundary = Math.ceil(writer.bitLength / 8) * 8;
   const lastByteBoundary = Math.floor(maxBits / 8) * 8;
   if (firstByteBoundary < maxBits) {
     // Add initial padding bits
-    bitArray.pushNumber(0, firstByteBoundary - bitArray.length);
+    writer.pushNumber(0, firstByteBoundary - writer.bitLength);
     // Add padding codewords
-    while (bitArray.length < lastByteBoundary) {
-      bitArray.pushNumber(0b11101100, 8);
-      if (bitArray.length < lastByteBoundary) {
-        bitArray.pushNumber(0b00010001, 8);
+    while (writer.bitLength < lastByteBoundary) {
+      writer.pushNumber(0b11101100, 8);
+      if (writer.bitLength < lastByteBoundary) {
+        writer.pushNumber(0b00010001, 8);
       }
     }
   }
   // Add final padding bits
-  bitArray.pushNumber(0, maxBits - bitArray.length);
+  writer.pushNumber(0, maxBits - writer.bitLength);
 }

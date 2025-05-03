@@ -1,4 +1,4 @@
-import { BitArray } from "./bit-array";
+import { Bits } from "./bit-writer";
 import { addFiller, BitOverflowError, maybeCompressBytes } from "./compression";
 import { CODING_SPECS, CodingVersion, ErrorCorrectionLevelOrNone, SPECS, Version } from "./specs";
 
@@ -8,7 +8,7 @@ export type FitBytesOptions = {
 };
 
 export type FitBytesResult = {
-  bits: BitArray;
+  bits: Bits;
   version: Version;
   errorCorrectionLevel: ErrorCorrectionLevelOrNone;
 };
@@ -62,7 +62,7 @@ export function fitBytes(data: Uint8Array, options: FitBytesOptions): FitBytesRe
         continue;
       }
       const errorCorrectionSpec = spec.errorCorrectionSpecs[modifiedLevel]!;
-      if (compressed.length > errorCorrectionSpec.dataBits) {
+      if (compressed.bitLength > errorCorrectionSpec.dataBits) {
         // Data too large
         continue;
       }
@@ -70,7 +70,7 @@ export function fitBytes(data: Uint8Array, options: FitBytesOptions): FitBytesRe
       // Found a version that fits. Finalize the result.
       addFiller(compressed, errorCorrectionSpec.dataBits, CODING_SPECS[codingVersion]);
       return {
-        bits: compressed,
+        bits: compressed.transferToBytes(),
         version,
         errorCorrectionLevel: modifiedLevel,
       };

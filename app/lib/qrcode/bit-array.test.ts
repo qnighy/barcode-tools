@@ -28,6 +28,18 @@ test("construct with array", () => {
   expect(Array.from(new BitArray([1, 0, 2]))).toEqual([1, 0, 1]);
 });
 
+test("construct with large array", () => {
+  const expected = [
+    0, 0, 0, 1, 0, 0, 0, 0,
+    0, 0, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, 1, 0, 0,
+    0, 1, 0, 1, 0, 1, 1, 0,
+    0,
+  ];
+  const actual = [...new BitArray(expected)];
+  expect(actual).toEqual(expected);
+});
+
 test("construct with iterable", () => {
   expect(Array.from(new BitArray(function*() {
     yield 1;

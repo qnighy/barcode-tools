@@ -165,6 +165,18 @@ export class BitArray implements Iterable<Bit> {
     return this.#getNumberAbs(this.#bitOffset + index, this.#bitOffset + index + length);
   }
 
+  subByteArray(start: number, length: number): Uint8Array {
+    const absStart = this.#bitOffset + start;
+    if (absStart < 0 || length < 0 || absStart + length > this.#bitLength) {
+      throw new RangeError("Index out of bounds");
+    } else if ((absStart & 7) || (length & 7)) {
+      throw new RangeError("Not at byte boundary");
+    }
+    const byteStart = absStart >> 3;
+    const byteLength = Math.ceil(length / 8);
+    return new Uint8Array(this.#wordBuffer.buffer, byteStart, byteLength);
+  }
+
   setAt(index: number, value: BitLike): void {
     index = Math.trunc(index);
     if (!this.#isValidIndex(index)) {
@@ -172,9 +184,9 @@ export class BitArray implements Iterable<Bit> {
     }
     const abs = this.#bitOffset + index;
     if (value) {
-      this.#wordBuffer.setUint32(abs >> 5, this.#wordBuffer.getUint32((abs >> 5) << 2) | (1 << (31 - (abs & 31))));
+      this.#wordBuffer.setUint32((abs >> 5) << 2, this.#wordBuffer.getUint32((abs >> 5) << 2) | (1 << (31 - (abs & 31))));
     } else {
-      this.#wordBuffer.setUint32(abs >> 5, this.#wordBuffer.getUint32((abs >> 5) << 2) & ~(1 << (31 - (abs & 31))));
+      this.#wordBuffer.setUint32((abs >> 5) << 2, this.#wordBuffer.getUint32((abs >> 5) << 2) & ~(1 << (31 - (abs & 31))));
     }
   }
 

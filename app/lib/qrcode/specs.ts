@@ -65,6 +65,7 @@ export type VersionSpec = {
 export type ErrorCorrectionSpec = {
   numEccBlocks: number;
   numEccBytes: number;
+  numEccBytesEach: number;
   p: number;
   eccBlockGroups: ErrorCorrectionBlockGroup[];
   dataBytes: number;
@@ -331,6 +332,7 @@ function getVersionSpec(version: Version): VersionSpec {
     errorCorrectionSpecs[level] = {
       numEccBlocks: numBlocks,
       numEccBytes: numBlocks * (r * 2 + p),
+      numEccBytesEach: r * 2 + p,
       p,
       eccBlockGroups,
       dataBytes,

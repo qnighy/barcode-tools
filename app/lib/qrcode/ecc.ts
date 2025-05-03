@@ -1,12 +1,12 @@
-import { BitArray } from "./bit-array";
+import { Bits } from "./bit-writer";
 import { POLYNOMIALS } from "./poly";
 import { ErrorCorrectionLevelOrNone, SPECS, Version } from "./specs";
 
 export function encodeErrorCorrection(
-  bits: BitArray,
+  bits: Bits,
   version: Version,
   errorCorrectionLevel: ErrorCorrectionLevelOrNone
-): BitArray {
+): Bits {
   const spec = SPECS[version];
   const errorCorrectionSpec = spec.errorCorrectionSpecs[errorCorrectionLevel];
   if (!errorCorrectionSpec) {
@@ -16,11 +16,7 @@ export function encodeErrorCorrection(
 
   // It's 4 in M1 and M3, 0 otherwise
   const zeroBits = spec.dataCapacityBytes * 8 - spec.truncatedDataCapacityBits;
-  if (zeroBits > 0) {
-    bits.pushNumber(0, zeroBits);
-  }
-  const output = new BitArray(spec.dataCapacityBits);
-  const outputBytes = output.subByteArray(0, Math.floor(spec.dataCapacityBits / 8) * 8);
+  const outputBytes = new Uint8Array(Math.ceil(spec.truncatedDataCapacityBits / 8));
 
   const maxBlockSize = Math.ceil(spec.dataCapacityBytes / errorCorrectionSpec.numEccBlocks);
   const blockSize1 = Math.floor(spec.dataCapacityBytes / errorCorrectionSpec.numEccBlocks);
@@ -36,9 +32,9 @@ export function encodeErrorCorrection(
   for (let i = 0; i < errorCorrectionSpec.numEccBlocks; i++) {
     const blockSize = i < blockSize1Count ? blockSize1 : blockSize2;
     const dataSize = blockSize - errorCorrectionSpec.numEccBytesEach;
-    const dataSlice = bits.subByteArray(
+    const dataSlice = bits.bytes.subarray(
       blockSize1 * i + Math.max(0, i - blockSize1Count),
-      dataSize * 8
+      blockSize1 * i + Math.max(0, i - blockSize1Count) + dataSize,
     );
     for (let j = 0; j < dataSize1; j++) {
       outputBytes[errorCorrectionSpec.numEccBlocks * j + i] = dataSlice[j];
@@ -57,21 +53,21 @@ export function encodeErrorCorrection(
     const dataSize = blockSize - errorCorrectionSpec.numEccBytesEach;
     const block = i < blockSize1Count ? block1 : blockBuffer;
 
-    const dataSlice = bits.subByteArray(
+    const dataSlice = bits.bytes.subarray(
       blockSize1 * i + Math.max(0, i - blockSize1Count),
-      dataSize * 8
+      blockSize1 * i + Math.max(0, i - blockSize1Count) + dataSize
     );
     block.set(dataSlice, 0);
     poly.generate(block);
 
     if (zeroBits > 0) {
       // Not byte-aligned
+      const bytePos = Math.floor(errorCorrectionSpec.dataBits / 8);
       for (let j = 0; j < errorCorrectionSpec.numEccBytesEach; j++) {
-        output.setNumber(
-          errorCorrectionSpec.dataBits + (errorCorrectionSpec.numEccBlocks * j + i) * 8,
-          8,
-          block[dataSize + j]
-        );
+        const byte = block[dataSize + j];
+        const index = bytePos + errorCorrectionSpec.numEccBlocks * j + i;
+        outputBytes[index] |= (byte >>> (8 - zeroBits));
+        outputBytes[index + 1] |= byte << zeroBits;
       }
     } else {
       const bytePos = errorCorrectionSpec.dataBytes;
@@ -81,5 +77,8 @@ export function encodeErrorCorrection(
     }
   }
 
-  return output;
+  return {
+    bitLength: spec.truncatedDataCapacityBits,
+    bytes: outputBytes,
+  };
 }

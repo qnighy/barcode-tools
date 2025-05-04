@@ -1,4 +1,5 @@
-import { isMicroQRVersion, SPECS, Version } from "./specs";
+import { pourMetadataBits } from "./layout";
+import { ErrorCorrectionLevelOrNone, isMicroQRVersion, SPECS, Version } from "./specs";
 
 type MaskFunction = (i: number, j: number) => boolean;
 
@@ -20,19 +21,20 @@ const QR_MASKS: MaskFunction[] = [
   (i, j) => ((i + j) % 2 + i * j % 3) % 2 === 0,
 ];
 
-export function applyOptimalMask(
+export function applyAutoMaskAndMetadata(
   mat: Uint8Array,
-  version: Version
-): number {
+  version: Version,
+  errorCorrectionLevel: ErrorCorrectionLevelOrNone
+): void {
   const numMasks = isMicroQRVersion(version) ? 4 : 8;
   const tmpMat = mat.slice();
-  applyMask(tmpMat, version, 0);
+  applyMaskAndMetadata(tmpMat, version, errorCorrectionLevel, 0);
   let optimalMask = 0;
   let optimalScore = evaluateMask(tmpMat, version);
   console.log("mask =", 0, ", score =", optimalScore);
   for (let mask = 1; mask < numMasks; mask++) {
     tmpMat.set(mat);
-    applyMask(tmpMat, version, mask);
+    applyMaskAndMetadata(tmpMat, version, errorCorrectionLevel, mask);
     const score = evaluateMask(tmpMat, version);
     console.log("mask =", mask, ", score =", score);
     if (score > optimalScore) {
@@ -40,8 +42,17 @@ export function applyOptimalMask(
       optimalScore = score;
     }
   }
-  applyMask(mat, version, optimalMask);
-  return optimalMask;
+  applyMaskAndMetadata(mat, version, errorCorrectionLevel, optimalMask);
+}
+
+export function applyMaskAndMetadata(
+  mat: Uint8Array,
+  version: Version,
+  errorCorrectionLevel: ErrorCorrectionLevelOrNone,
+  mask: number
+): void {
+  applyMask(mat, version, mask);
+  pourMetadataBits(mat, version, errorCorrectionLevel, mask);
 }
 
 export function applyMask(

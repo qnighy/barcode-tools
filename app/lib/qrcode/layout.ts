@@ -139,19 +139,6 @@ export function* bitPositions2(mat: Uint8Array, version: Version): IterableItera
   }
 }
 
-export function* bitPositions(version: Version): IterableIterator<[number, number]> {
-  const { width } = SPECS[version];
-  const height = width;
-  const mat = new Uint8Array(width * height);
-  fillFunctionPatterns(mat, version);
-  for (const [x, y] of rawBitPositions(version)) {
-    if (mat[y * width + x] & -2) {
-      continue;
-    }
-    yield [x, y];
-  }
-}
-
 function* rawBitPositions(version: Version): IterableIterator<[number, number]> {
   const { width } = SPECS[version];
   const height = width;

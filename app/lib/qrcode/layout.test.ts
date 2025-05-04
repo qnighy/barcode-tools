@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { bitPositions, bitPositions2, fillFunctionPatterns } from "./layout";
+import { bitPositions2, fillFunctionPatterns } from "./layout";
 import { SPECS, Version, VERSIONS } from "./specs";
 
 function getFunctionPatterns(version: Version): Uint8Array {
@@ -334,11 +334,19 @@ test("bitPositions for Version 7 (2)", () => {
   `.replace(/^\s+/gm, ""));
 });
 
+export function* bitPositions3(version: Version): IterableIterator<[number, number]> {
+  const { width } = SPECS[version];
+  const height = width;
+  const mat = new Uint8Array(width * height);
+  fillFunctionPatterns(mat, version);
+  yield* bitPositions2(mat, version);
+}
+
 for (const version of VERSIONS) {
   test(`bitPositions value range for version ${version}`, () => {
     const { width } = SPECS[version];
     const violations: [number, number][] = [];
-    for (const [x, y] of bitPositions(version)) {
+    for (const [x, y] of bitPositions3(version)) {
       if (x < 0 || x >= width || y < 0 || y >= width) {
         violations.push([x, y]);
       }
@@ -349,7 +357,7 @@ for (const version of VERSIONS) {
   test(`bitPositions uniqueness for version ${version}`, () => {
     const set = new Set<string>();
     const duplicated = new Set<string>();
-    for (const [x, y] of bitPositions(version)) {
+    for (const [x, y] of bitPositions3(version)) {
       const s = `${x},${y}`;
       if (set.has(s)) {
         duplicated.add(s);
@@ -362,7 +370,7 @@ for (const version of VERSIONS) {
 
   test(`bitPositions number match for version ${version}`, () => {
     const { dataCapacityBits } = SPECS[version];
-    const count = Array.from(bitPositions(version)).length;
+    const count = Array.from(bitPositions3(version)).length;
     expect(count).toEqual(dataCapacityBits);
   });
 }

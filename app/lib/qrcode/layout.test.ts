@@ -247,7 +247,7 @@ function renderBitPositionsA(version: Version): string {
   const height = width;
   const mat = new Uint8Array(width * height);
   fillFunctionPatterns(mat, version);
-  const mat2 = Array.from({ length: height }, () => Array.from({ length: width }, () => "\u3000"));
+  const mat2 = Array.from({ length: height }, () => Array.from({ length: width }, () => "\u2592"));
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const byte = mat[y * width + x];

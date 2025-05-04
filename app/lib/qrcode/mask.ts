@@ -31,12 +31,10 @@ export function applyAutoMaskAndMetadata(
   applyMaskAndMetadata(tmpMat, version, errorCorrectionLevel, 0);
   let optimalMask = 0;
   let optimalScore = evaluateMask(tmpMat, version);
-  console.log("mask =", 0, ", score =", evaluateMaskDetail(tmpMat, version));
   for (let mask = 1; mask < numMasks; mask++) {
     tmpMat.set(mat);
     applyMaskAndMetadata(tmpMat, version, errorCorrectionLevel, mask);
     const score = evaluateMask(tmpMat, version);
-    console.log("mask =", mask, ", score =", evaluateMaskDetail(tmpMat, version));
     if (score > optimalScore) {
       optimalMask = mask;
       optimalScore = score;
@@ -156,48 +154,14 @@ function evaluateSegmentPenalty(
     penalty += count >= 5 ? N1 + (count - 5) : 0;
   }
 
-  // The following segments always induce a penalty:
-  // - Top-left finder pattern (total penalty 32):
-  //   - ( 0, 0) - ( 6, 0), horizontal, dark , penalty 5
-  //   - ( 1, 1) - ( 5, 1), horizontal, light, penalty 3
-  //   - ( 1, 5) - ( 5, 5), horizontal, light, penalty 3
-  //   - ( 0, 6) - ( 6, 6), horizontal, dark , penalty 5
-  //   - ( 0, 0) - ( 0, 6), vertical  , dark , penalty 5
-  //   - ( 1, 1) - ( 1, 5), vertical  , light, penalty 3
-  //   - ( 5, 1) - ( 5, 5), vertical  , light, penalty 3
-  //   - ( 6, 0) - ( 6, 6), vertical  , dark , penalty 5
-  // - Top-left separator + format information (total penalty 22):
-  //   - ( 0, 7) - ( 8, 7), horizontal, light, penalty 7
-  //   - ( 0, 8) - ( 5, 8), horizontal, light, penalty 4
-  //   - ( 7, 0) - ( 7, 8), vertical  , light, penalty 7
-  //   - ( 8, 0) - ( 8, 5), vertical  , light, penalty 4
-  // - Top-right finder pattern (total penalty 32):
-  //   - (-7, 0) - (-1, 0), horizontal, dark , penalty 5
-  //   - (-6, 1) - (-2, 1), horizontal, light, penalty 3
-  //   - (-6, 5) - (-2, 5), horizontal, light, penalty 3
-  //   - (-7, 6) - (-1, 6), horizontal, dark , penalty 5
-  //   - (-7, 0) - (-7, 6), vertical  , dark , penalty 5
-  //   - (-6, 1) - (-6, 5), vertical  , light, penalty 3
-  //   - (-2, 1) - (-2, 5), vertical  , light, penalty 3
-  //   - (-1, 0) - (-1, 6), vertical  , dark , penalty 5
-  // - Top-right separator + format information (total penalty 19):
-  //   - (-8, 7) - (-1, 7), horizontal, light, penalty 6
-  //   - (-8, 8) - (-1, 8), horizontal, light, penalty 6
-  //   - (-8, 0) - (-8, 8), vertical  , light, penalty 7
-  // - Bottom-left finder pattern (total penalty 32):
-  //   - (0, -7) - (0, -1), horizontal, dark , penalty 5
-  //   - (1, -6) - (1, -2), horizontal, light, penalty 3
-  //   - (1, -6) - (1, -2), horizontal, light, penalty 3
-  //   - (0, -7) - (6, -7), horizontal, dark , penalty 5
-  //   - (0, -7) - (0, -1), vertical  , dark , penalty 5
-  //   - (1, -6) - (1, -2), vertical  , light, penalty 3
-  //   - (5, -6) - (5, -2), vertical  , light, penalty 3
-  //   - (6, -7) - (6, -1), vertical  , dark , penalty 5
-  // - Bottom-left separator + format information (total penalty 19):
-  //   - (0, -8) - (8, -8), horizontal, light, penalty 7
-  //   - (7, -8) - (7, -1), horizontal, light, penalty 6
-  //   - (8, -8) - (8, -1), vertical  , light, penalty 6
-  return penalty - 156;
+  // Base penalty to discount:
+  // - Each finder pattern + separator implies:
+  //   - 4 dark segments of length 7 (penalty 5)
+  //   - 4 light segments of length 5 (penalty 3)
+  //   - 2 light segments of length 8 (penalty 6)
+  // - Therefore, each finder pattern + separator implies a penalty of 44.
+  // - Total base penalty: 3 * 44 = 132
+  return penalty - 132;
 }
 
 function evaluate2x2BlockPenalty(
@@ -223,22 +187,12 @@ function evaluate2x2BlockPenalty(
     }
   }
 
-  // The following segments always induce a penalty (total count 37):
-  // - Top-left finder pattern:
-  //   - Rectangle (2, 2) - (4, 4), dark, count 4
-  // - Top-left separator + format information (total count 11):
-  //   - Rectangle (7, 0) - (8, 5), light, count 5
-  //   - Rectangle (0, 7) - (5, 8), light, count 5
-  //   - Rectangle (7, 7) - (8, 8), light, count 1
-  // - Top-right finder pattern:
-  //   - Rectangle (-5, 2) - (-3, 4), dark, count 4
-  // - Top-right separator + format information:
-  //   - Rectangle (-8, 7) - (-1, 8), light, count 7
-  // - Bottom-left finder pattern:
-  //   - Rectangle (2, -5) - (4, -3), dark, count 4
-  // - Bottom-left separator + format information:
-  //   - Rectangle (7, -8) - (8, -1), light, count 7
-  return (num2x2Blocks - 37) * N2;
+  // Base penalty to discount:
+  // - Each finder pattern has a 3x3 area of dark segments,
+  //   which contains 4 2x2 blocks.
+  // - Each finder pattern contributes 12 penalty points.
+  // - It amounts to 36 penalty points.
+  return (num2x2Blocks - 12) * N2;
 }
 
 function evaluatePseudoFinderPenalty(
@@ -250,42 +204,86 @@ function evaluatePseudoFinderPenalty(
   const { width } = SPECS[version];
   const height = width;
 
-  let hasPseudoFinder = false;
+  // There are always 18 pseudo finders that originates from the real finder.
+  let numPseudoFinders = -18;
+
   for (let y = 0; y < height; y++) {
-    // Bits from the left to x + 11
-    let bitsLA11 = 0;
-    for (let x = -11; x <= width - 7; x++) {
-      if (x >= 0) {
+    let rl6 = 10000;
+    let rl5 = 10000;
+    let rl4 = 10000;
+    let rl3 = 10000;
+    let rl2 = 10000;
+    let rl1 = 10000;
+    let rl0 = 10000;
+    // the value of rl6, rl4, rl2, rl0 segments
+    let lastValue = 0;
+    for (let x = 0; x <= width + 1; x++) {
+      const current = x < width ? mat[y * width + x] & 1 : lastValue ^ 1;
+      if (current !== lastValue) {
+        // Check if rl5:rl4:rl3:rl2:rl1 is 1:1:3:1:1 and
+        // either rl6 or rl0 is at least 4 times rl1
         if (
-          ((bitsLA11 & 0b111111111110000) === 0b000010111010000 && x >= 4) ||
-          ((bitsLA11 & 0b000011111111111) === 0b000010111010000 && x <= width - 11)
+          lastValue === 0 &&
+          rl5 === rl1 &&
+          rl4 === rl1 &&
+          rl3 === rl1 * 3 &&
+          rl2 === rl1 &&
+          (rl6 >= rl1 * 4 || rl0 >= rl1 * 4)
         ) {
-          // penalty += N3;
-          hasPseudoFinder = true;
+          numPseudoFinders++;
         }
+
+        lastValue = current;
+        rl6 = rl5;
+        rl5 = rl4;
+        rl4 = rl3;
+        rl3 = rl2;
+        rl2 = rl1;
+        rl1 = rl0;
+        rl0 = 0;
       }
-      const value = x + 11 < width ? mat[y * width + (x + 11)] & 1 : 0;
-      bitsLA11 = (bitsLA11 << 1) | value;
+      rl0 += x < width ? 1 : 10000;
     }
   }
   for (let x = 0; x < width; x++) {
-    // Bits from the left to x + 11
-    let bitsLA11 = 0;
-    for (let y = -11; y <= height - 7; y++) {
-      if (y >= 0) {
+    let rl6 = 10000;
+    let rl5 = 10000;
+    let rl4 = 10000;
+    let rl3 = 10000;
+    let rl2 = 10000;
+    let rl1 = 10000;
+    let rl0 = 10000;
+    // the value of rl6, rl4, rl2, rl0 segments
+    let lastValue = 0;
+    for (let y = 0; y <= height + 1; y++) {
+      const current = y < height ? mat[y * width + x] & 1 : lastValue ^ 1;
+      if (current !== lastValue) {
+        // Check if rl5:rl4:rl3:rl2:rl1 is 1:1:3:1:1 and
+        // either rl6 or rl0 is at least 4 times rl1
         if (
-          ((bitsLA11 & 0b111111111110000) === 0b000010111010000 && y >= 4) ||
-          ((bitsLA11 & 0b000011111111111) === 0b000010111010000 && y <= height - 11)
+          lastValue === 0 &&
+          rl5 === rl1 &&
+          rl4 === rl1 &&
+          rl3 === rl1 * 3 &&
+          rl2 === rl1 &&
+          (rl6 >= rl1 * 4 || rl0 >= rl1 * 4)
         ) {
-          // penalty += N3;
-          hasPseudoFinder = true;
+          numPseudoFinders++;
         }
+
+        lastValue = current;
+        rl6 = rl5;
+        rl5 = rl4;
+        rl4 = rl3;
+        rl3 = rl2;
+        rl2 = rl1;
+        rl1 = rl0;
+        rl0 = 0;
       }
-      const value = y + 11 < height ? mat[(y + 11) * width + x] & 1 : 0;
-      bitsLA11 = (bitsLA11 << 1) | value;
+      rl0 += y < height ? 1 : 10000;
     }
   }
-  return hasPseudoFinder ? N3 : 0;
+  return N3 * numPseudoFinders;
 }
 
 function evaluateQRNonUniformityPenalty(

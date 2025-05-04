@@ -1,5 +1,6 @@
+import { encodeBCH5, encodeBCH6 } from "./bch";
 import { Bits } from "./bit-writer";
-import { isMicroQRVersion, SPECS, Version } from "./specs";
+import { ErrorCorrectionLevelOrNone, isMicroQRVersion, MicroQRVersion, QRVersion, SPECS, Version } from "./specs";
 
 export const FUNCTION_PATTERN = 2;
 export const METADATA_AREA = 4;
@@ -186,5 +187,153 @@ function* rawBitPositions(version: Version): IterableIterator<[number, number]> 
         yield [x, y];
       }
     }
+  }
+}
+
+const QR_ECC_LEVEL_NUMBERS: Partial<Record<ErrorCorrectionLevelOrNone, number>> = {
+  L: 0b01,
+  M: 0b00,
+  Q: 0b11,
+  H: 0b10,
+};
+const MICROQR_SYMBOL_NUMBERS: Record<MicroQRVersion, Partial<Record<ErrorCorrectionLevelOrNone, number>>> = {
+  M1: {
+    NONE: 0b000,
+  },
+  M2: {
+    L: 0b001,
+    M: 0b010,
+  },
+  M3: {
+    L: 0b011,
+    M: 0b100,
+  },
+  M4: {
+    L: 0b101,
+    M: 0b110,
+    Q: 0b111,
+  },
+};
+
+export function pourMetadataBits(
+  mat: Uint8Array,
+  version: Version,
+  errorCorrectionLevel: ErrorCorrectionLevelOrNone,
+  mask: number
+): void {
+  if (isMicroQRVersion(version)) {
+    pourMicroQRMetadataBits(mat, version, errorCorrectionLevel, mask);
+  } else {
+    pourQRMetadataBits(mat, version, errorCorrectionLevel, mask);
+  }
+}
+
+const QR_FORMAT_INFO_POSITIONS = [
+  // Top left (bit 0 to 14)
+  [ 0,  8,  0],
+  [ 1,  8,  1],
+  [ 2,  8,  2],
+  [ 3,  8,  3],
+  [ 4,  8,  4],
+  [ 5,  8,  5],
+  [ 6,  8,  7],
+  [ 7,  8,  8],
+  [ 8,  7,  8],
+  [ 9,  5,  8],
+  [10,  4,  8],
+  [11,  3,  8],
+  [12,  2,  8],
+  [13,  1,  8],
+  [14,  0,  8],
+  // Top right (bit 0 to 7)
+  [ 0, -1,  8],
+  [ 1, -2,  8],
+  [ 2, -3,  8],
+  [ 3, -4,  8],
+  [ 4, -5,  8],
+  [ 5, -6,  8],
+  [ 6, -7,  8],
+  [ 7, -8,  8],
+  // Bottom left (bit 8 to 14)
+  [ 8,  8, -7],
+  [ 9,  8, -6],
+  [10,  8, -5],
+  [11,  8, -4],
+  [12,  8, -3],
+  [13,  8, -2],
+  [14,  8, -1],
+];
+
+const QR_FORMAT_INFO_MASK = 0b101010000010010;
+
+function pourQRMetadataBits(
+  mat: Uint8Array,
+  version: QRVersion,
+  errorCorrectionLevel: ErrorCorrectionLevelOrNone,
+  mask: number
+): void {
+  const spec = SPECS[version];
+  const { width } = spec;
+  const height = width;
+  const eccLevelNumber = QR_ECC_LEVEL_NUMBERS[errorCorrectionLevel];
+  if (eccLevelNumber == null) {
+    throw new RangeError(`Invalid error correction level ${errorCorrectionLevel} for version ${version}`);
+  }
+
+  const formatInfoBits = encodeBCH5((eccLevelNumber << 3) | (mask & 0b111)) ^ QR_FORMAT_INFO_MASK;
+  for (const [bitPos, relX, relY] of QR_FORMAT_INFO_POSITIONS) {
+    const x = relX < 0 ? width + relX : relX;
+    const y = relY < 0 ? height + relY : relY;
+    const bit = (formatInfoBits >> bitPos) & 1;
+    mat[y * width + x] = METADATA_AREA + bit;
+  }
+  // Always set to 1
+  mat[(height - 8) * width + 8] = METADATA_AREA + 1;
+
+  if (spec.versionInfoSize) {
+    const versionInfoBits = encodeBCH6(version);
+    // Top right
+    for (let i = 0; i < 18; i++) {
+      const bit = (versionInfoBits >> i) & 1;
+      const x = width - 11 + i % 3;
+      const y = Math.floor(i / 3);
+      mat[y * width + x] = METADATA_AREA + bit;
+    }
+    // Bottom left
+    for (let i = 0; i < 18; i++) {
+      const bit = (versionInfoBits >> i) & 1;
+      const x = Math.floor(i / 3);
+      const y = height - 11 + i % 3;
+      mat[y * width + x] = METADATA_AREA + bit;
+    }
+  }
+}
+
+const MICRO_QR_FORMAT_INFO_MASK = 0b100010001000101;
+
+function pourMicroQRMetadataBits(
+  mat: Uint8Array,
+  version: MicroQRVersion,
+  errorCorrectionLevel: ErrorCorrectionLevelOrNone,
+  mask: number
+): void {
+  const spec = SPECS[version];
+  const { width } = spec;
+  const symbolNumber = MICROQR_SYMBOL_NUMBERS[version][errorCorrectionLevel];
+  if (symbolNumber == null) {
+    throw new RangeError(`Invalid error correction level ${errorCorrectionLevel} for version ${version}`);
+  }
+  const formatInfoBits = encodeBCH5((symbolNumber << 2) | (mask & 0b11)) ^ MICRO_QR_FORMAT_INFO_MASK;
+  for (let i = 0; i < 8; i++) {
+    const bit = (formatInfoBits >> i) & 1;
+    const x = 8;
+    const y = i + 1;
+    mat[y * width + x] = METADATA_AREA + bit;
+  }
+  for (let i = 8; i < 15; i++) {
+    const bit = (formatInfoBits >> i) & 1;
+    const x = 15 - i;
+    const y = 8;
+    mat[y * width + x] = METADATA_AREA + bit;
   }
 }

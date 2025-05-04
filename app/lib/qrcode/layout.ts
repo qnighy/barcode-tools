@@ -129,7 +129,7 @@ function alignmentParity(x: number, y: number): number {
   return parity & 1;
 }
 
-export function* bitPositions2(mat: Uint8Array, version: Version): IterableIterator<[number, number]> {
+export function* bitPositions(mat: Uint8Array, version: Version): IterableIterator<[number, number]> {
   const { width } = SPECS[version];
   for (const [x, y] of rawBitPositions(version)) {
     if (mat[y * width + x] & -2) {

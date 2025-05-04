@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { bitPositions2, fillFunctionPatterns } from "./layout";
+import { bitPositions, fillFunctionPatterns } from "./layout";
 import { SPECS, Version, VERSIONS } from "./specs";
 
 function getFunctionPatterns(version: Version): Uint8Array {
@@ -242,7 +242,7 @@ test("Function patterns for Version 7", () => {
 // which U+2588/U+2592/U+2593 also have.
 const cyrillic = "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя";
 
-function renderBitPositionsC(version: Version): string {
+function renderBitPositionsA(version: Version): string {
   const { width } = SPECS[version];
   const height = width;
   const mat = new Uint8Array(width * height);
@@ -259,7 +259,7 @@ function renderBitPositionsC(version: Version): string {
     }
   }
   let i = 0;
-  for (const [x, y] of bitPositions2(mat, version)) {
+  for (const [x, y] of bitPositions(mat, version)) {
     mat2[y][x] = cyrillic[Math.floor(i / 8) % cyrillic.length];
     i++;
   }
@@ -267,7 +267,7 @@ function renderBitPositionsC(version: Version): string {
 }
 
 test("bitPositions for Version M2 (2)", () => {
-  expect(renderBitPositionsC("M2")).toEqual(`\
+  expect(renderBitPositionsA("M2")).toEqual(`\
     ███████▒█▒█▒█
     █▒▒▒▒▒█▒▓ГГВВ
     █▒███▒█▒▓ГГВВ
@@ -285,7 +285,7 @@ test("bitPositions for Version M2 (2)", () => {
 });
 
 test("bitPositions for Version 7 (2)", () => {
-  expect(renderBitPositionsC(7)).toEqual(`\
+  expect(renderBitPositionsA(7)).toEqual(`\
     ███████▒▓ббббЛЛЛЛххххееддТТТТььььз▓▓▓▒███████
     █▒▒▒▒▒█▒▓ввббММЛЛццххееддТТТТььььз▓▓▓▒█▒▒▒▒▒█
     █▒███▒█▒▓ввббММЛЛццххееддУУССээыыз▓▓▓▒█▒███▒█
@@ -339,7 +339,7 @@ export function* bitPositions3(version: Version): IterableIterator<[number, numb
   const height = width;
   const mat = new Uint8Array(width * height);
   fillFunctionPatterns(mat, version);
-  yield* bitPositions2(mat, version);
+  yield* bitPositions(mat, version);
 }
 
 for (const version of VERSIONS) {

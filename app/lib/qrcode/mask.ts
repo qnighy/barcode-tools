@@ -31,12 +31,12 @@ export function applyAutoMaskAndMetadata(
   applyMaskAndMetadata(tmpMat, version, errorCorrectionLevel, 0);
   let optimalMask = 0;
   let optimalScore = evaluateMask(tmpMat, version);
-  console.log("mask =", 0, ", score =", optimalScore);
+  console.log("mask =", 0, ", score =", evaluateMaskDetail(tmpMat, version));
   for (let mask = 1; mask < numMasks; mask++) {
     tmpMat.set(mat);
     applyMaskAndMetadata(tmpMat, version, errorCorrectionLevel, mask);
     const score = evaluateMask(tmpMat, version);
-    console.log("mask =", mask, ", score =", score);
+    console.log("mask =", mask, ", score =", evaluateMaskDetail(tmpMat, version));
     if (score > optimalScore) {
       optimalMask = mask;
       optimalScore = score;

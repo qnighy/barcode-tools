@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
-import { bitPositions, fillFunctionPatterns } from "./layout";
+import { bitPositions, fillFunctionPatterns, pourDataBits } from "./layout";
 import { SPECS, Version, VERSIONS } from "./specs";
+import { Bits } from "./bit-writer";
 
 function getFunctionPatterns(version: Version): Uint8Array {
   const { width } = SPECS[version];
@@ -374,3 +375,107 @@ for (const version of VERSIONS) {
     expect(count).toEqual(dataCapacityBits);
   });
 }
+
+test("pourDataBits as in Annex I QR code", () => {
+  const version: Version = 1;
+  const input: Bits = {
+    bitLength: 208,
+    bytes: new Uint8Array([
+      0b00010000,
+      0b00100000,
+      0b00001100,
+      0b01010110,
+      0b01100001,
+      0b10000000,
+      0b11101100,
+      0b00010001,
+      0b11101100,
+      0b00010001,
+      0b11101100,
+      0b00010001,
+      0b11101100,
+      0b00010001,
+      0b11101100,
+      0b00010001,
+      0b10100101,
+      0b00100100,
+      0b11010100,
+      0b11000001,
+      0b11101101,
+      0b00110110,
+      0b11000111,
+      0b10000111,
+      0b00101100,
+      0b01010101,
+    ]),
+  };
+
+  const { width } = SPECS[version];
+  const mat = new Uint8Array(width * width);
+  fillFunctionPatterns(mat, version);
+  pourDataBits(mat, version, input);
+
+  expect(mat).toEqual(new Uint8Array([
+    3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 1, 0, 2, 3, 3, 3, 3, 3, 3, 3,
+    3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 1, 1, 0, 2, 3, 2, 2, 2, 2, 2, 3,
+    3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 0, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
+    3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 0, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
+    3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 1, 1, 0, 2, 3, 2, 3, 3, 3, 2, 3,
+    3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 0, 0, 0, 2, 3, 2, 2, 2, 2, 2, 3,
+    3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3, 2, 3, 3, 3, 3, 3, 3, 3,
+    2, 2, 2, 2, 2, 2, 2, 2, 4, 1, 0, 1, 0, 2, 2, 2, 2, 2, 2, 2, 2,
+    4, 4, 4, 4, 4, 4, 3, 4, 4, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4,
+    1, 0, 0, 0, 0, 1, 2, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+    1, 0, 1, 1, 0, 0, 3, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1,
+    1, 0, 0, 1, 1, 0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0,
+    1, 0, 0, 0, 1, 1, 3, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0,
+    2, 2, 2, 2, 2, 2, 2, 2, 4, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0,
+    3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0,
+    3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1,
+    3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+    3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+    3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0,
+    3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0,
+    3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0,
+  ]));
+});
+
+test("pourDataBits as in Annex I MicroQR code", () => {
+  const version: Version = "M2";
+  const input: Bits = {
+    bitLength: 208,
+    bytes: new Uint8Array([
+      0b01000000,
+      0b00011000,
+      0b10101100,
+      0b11000011,
+      0b00000000,
+      0b10000110,
+      0b00001101,
+      0b00100010,
+      0b10101110,
+      0b00110000,
+    ]),
+  };
+
+  const { width } = SPECS[version];
+  const mat = new Uint8Array(width * width);
+  fillFunctionPatterns(mat, version);
+  pourDataBits(mat, version, input);
+
+  expect(mat).toEqual(new Uint8Array([
+    3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3,
+    3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 0, 0,
+    3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 0, 1, 1,
+    3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 0, 0, 1,
+    3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 1, 0, 1,
+    3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 0, 0,
+    3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 0, 1,
+    2, 2, 2, 2, 2, 2, 2, 2, 4, 0, 0, 1, 0,
+    3, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0,
+    2, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
+    3, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0,
+    2, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0,
+    3, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0,
+  ]));
+});

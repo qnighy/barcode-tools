@@ -1,3 +1,4 @@
+import { Bits } from "./bit-writer";
 import { isMicroQRVersion, SPECS, Version } from "./specs";
 
 export const FUNCTION_PATTERN = 2;
@@ -127,6 +128,33 @@ function alignmentParity(x: number, y: number): number {
     Number(x >= -1 && x <= 1 && y >= -1 && y <= 1) +
     Number(x === 0 && y === 0);
   return parity & 1;
+}
+
+export function pourDataBits(
+  mat: Uint8Array,
+  version: Version,
+  bits: Bits
+): void {
+  const spec = SPECS[version];
+  const { width } = spec;
+
+  let currentByte: number | null = null;
+  let bitIndex = 0;
+  for (const [x, y] of bitPositions(mat, version)) {
+    if (mat[y * width + x] & -2) {
+      continue;
+    }
+    if (bitIndex >= bits.bitLength) {
+      mat[y * width + x] = 0;
+      continue;
+    }
+    currentByte ??= bits.bytes[bitIndex >> 3];
+    mat[y * width + x] = (currentByte >> (7 - (bitIndex & 7))) & 1;
+    bitIndex++;
+    if ((bitIndex & 7) === 0) {
+      currentByte = null;
+    }
+  }
 }
 
 export function* bitPositions(mat: Uint8Array, version: Version): IterableIterator<[number, number]> {

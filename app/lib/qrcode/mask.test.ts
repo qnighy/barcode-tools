@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { fillFunctionPatterns } from "./layout";
-import { applyMask, evaluateMask } from "./mask";
+import { applyMask, evaluateMaskDetail } from "./mask";
 import { SPECS, Version } from "./specs";
 
 function renderMaskPattern(version: Version, mask: number): string {
@@ -312,8 +312,36 @@ test("mask pattern 11 for version M4", () => {
   `.replace(/^\s+/gm, ""));
 });
 
+// test("applyOptimalMask as in Annex I", () => {
+//   const mat = new Uint8Array([
+//     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 1, 0, 2, 3, 3, 3, 3, 3, 3, 3,
+//     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 1, 1, 0, 2, 3, 2, 2, 2, 2, 2, 3,
+//     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 0, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
+//     3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 0, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
+//     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 1, 1, 0, 2, 3, 2, 3, 3, 3, 2, 3,
+//     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 0, 0, 0, 2, 3, 2, 2, 2, 2, 2, 3,
+//     3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3, 2, 3, 3, 3, 3, 3, 3, 3,
+//     2, 2, 2, 2, 2, 2, 2, 2, 4, 1, 0, 1, 0, 2, 2, 2, 2, 2, 2, 2, 2,
+//     4, 4, 4, 4, 4, 4, 3, 4, 4, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4,
+//     1, 0, 0, 0, 0, 1, 2, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+//     1, 0, 1, 1, 0, 0, 3, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1,
+//     1, 0, 0, 1, 1, 0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0,
+//     1, 0, 0, 0, 1, 1, 3, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0,
+//     2, 2, 2, 2, 2, 2, 2, 2, 4, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0,
+//     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0,
+//     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1,
+//     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+//     3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+//     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0,
+//     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0,
+//     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0,
+//   ]);
+//   const mask = applyOptimalMask(mat, 1);
+//   expect(mask).toBe(0b010);
+// });
+
 test("QR mask evaluation (good - checker pattern)", () => {
-  const score = evaluateMask(new Uint8Array([
+  const scores = evaluateMaskDetail(new Uint8Array([
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 1, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 0, 1, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 1, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -351,11 +379,11 @@ test("QR mask evaluation (good - checker pattern)", () => {
   //     - rectangle 6x2: 2
   //     - rectangle 8x2: 2
 
-  expect(score).toEqual(-269);
+  expect(scores).toEqual([-2, -2, 0, 0, 0]);
 });
 
 test("QR mask evaluation (bad - vertical stripes)", () => {
-  const score = evaluateMask(new Uint8Array([
+  const scores = evaluateMaskDetail(new Uint8Array([
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 1, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 1, 0, 1, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 1, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -378,11 +406,11 @@ test("QR mask evaluation (bad - vertical stripes)", () => {
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
   ]), 1);
-  expect(score).toEqual(-493);
+  expect(scores).toEqual([-266, -187, -39, -40, 0]);
 });
 
 test("QR mask evaluation (bad - horizontal stripes)", () => {
-  const score = evaluateMask(new Uint8Array([
+  const scores = evaluateMaskDetail(new Uint8Array([
     3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 1, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 0, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 1, 1, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -405,11 +433,11 @@ test("QR mask evaluation (bad - horizontal stripes)", () => {
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   ]), 1);
-  expect(score).toEqual(-493);
+  expect(scores).toEqual([-266, -187, -39, -40, 0]);
 });
 
 test("QR mask evaluation (bad - 3x3 blocks)", () => {
-  const score = evaluateMask(new Uint8Array([
+  const scores = evaluateMaskDetail(new Uint8Array([
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 0, 1, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 0, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -432,11 +460,11 @@ test("QR mask evaluation (bad - 3x3 blocks)", () => {
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1,
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1,
   ]), 1);
-  expect(score).toEqual(-627);
+  expect(scores).toEqual([-400, -60, -300, -40, 0]);
 });
 
 test("QR mask evaluation (bad - 2x2 blocks)", () => {
-  const score = evaluateMask(new Uint8Array([
+  const scores = evaluateMaskDetail(new Uint8Array([
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 0, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 1, 0, 0, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -459,11 +487,11 @@ test("QR mask evaluation (bad - 2x2 blocks)", () => {
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1,
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1,
   ]), 1);
-  expect(score).toEqual(-445);
+  expect(scores).toEqual([-218, -4, -174, -40, 0]);
 });
 
 test("QR mask evaluation (bad - 2x2 dark blocks)", () => {
-  const score = evaluateMask(new Uint8Array([
+  const scores = evaluateMaskDetail(new Uint8Array([
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 1, 1, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 1, 1, 0, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -486,11 +514,11 @@ test("QR mask evaluation (bad - 2x2 dark blocks)", () => {
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1,
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1,
   ]), 1);
-  expect(score).toEqual(-480);
+  expect(scores).toEqual([-253, -60, -153, -40, 0]);
 });
 
 test("QR mask evaluation (bad - 2x2 light blocks)", () => {
-  const score = evaluateMask(new Uint8Array([
+  const scores = evaluateMaskDetail(new Uint8Array([
     3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 1, 1, 0, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 0, 0, 1, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 0, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -513,11 +541,11 @@ test("QR mask evaluation (bad - 2x2 light blocks)", () => {
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
     3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
   ]), 1);
-  expect(score).toEqual(-364);
+  expect(scores).toEqual([-137, -25, -72, -40, 0]);
 });
 
 test("QR mask evaluation (bad - pseudo finders)", () => {
-  const score = evaluateMask(new Uint8Array([
+  const scores = evaluateMaskDetail(new Uint8Array([
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 1, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 0, 1, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 1, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -540,11 +568,11 @@ test("QR mask evaluation (bad - pseudo finders)", () => {
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1,
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1,
   ]), 1);
-  expect(score).toEqual(-1310);
+  expect(scores).toEqual([-243, -95, -108, -40, 0]);
 });
 
 test("QR mask evaluation (bad - too many 0s)", () => {
-  const score = evaluateMask(new Uint8Array([
+  const scores = evaluateMaskDetail(new Uint8Array([
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 0, 0, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 0, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 0, 0, 0, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -567,11 +595,11 @@ test("QR mask evaluation (bad - too many 0s)", () => {
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   ]), 1);
-  expect(score).toEqual(-1345);
+  expect(scores).toEqual([-1118, -416, -612, -40, -50]);
 });
 
 test("QR mask evaluation (bad - too many 1s)", () => {
-  const score = evaluateMask(new Uint8Array([
+  const scores = evaluateMaskDetail(new Uint8Array([
     3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 1, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 1, 1, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 1, 1, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -594,5 +622,5 @@ test("QR mask evaluation (bad - too many 1s)", () => {
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   ]), 1);
-  expect(score).toEqual(-1096);
+  expect(scores).toEqual([-829, -300, -489, 0, -40]);
 });

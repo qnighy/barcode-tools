@@ -1,4 +1,5 @@
 import { Bit } from "./bit";
+import { BitExtMatrix } from "./bit-ext-matrix";
 import { SPECS, Version } from "./specs";
 
 const DIR_DX = [1, 0, -1, 0];
@@ -10,7 +11,7 @@ export type GenerateSVGPathOptions = {
 
 export function generateSVGPath(
   version: Version,
-  mat: Bit[][],
+  mat: BitExtMatrix,
   options: GenerateSVGPathOptions
 ): string {
   const { moduleSize } = options;
@@ -24,7 +25,7 @@ export function generateSVGPath(
     if (x < 0 || x >= width || y < 0 || y >= height) {
       return 0;
     }
-    return mat[y][x];
+    return mat.getAt(x, y);
   }
   function isValid(x: number, y: number, dir: number): boolean {
     const dx = DIR_DX[dir];

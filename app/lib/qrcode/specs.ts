@@ -425,7 +425,7 @@ const ERROR_CORRECTION_LEVEL_TABLE: Record<ErrorCorrectionLevelOrNone, Partial<R
   },
   M: {
     "M2": [ 1,  2, 2],
-    "M3": [ 1,  3, 2],
+    "M3": [ 1,  4, 0],
     "M4": [ 1,  5, 0],
        1: [ 1,  4, 2],
        2: [ 1,  8, 0],

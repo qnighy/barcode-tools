@@ -5,7 +5,10 @@ import { Bits } from "./bit-writer";
 
 test("1-H digit example", () => {
   const result = fitBytes(
-    new TextEncoder().encode("01234567"),
+    [{
+      eciDesignator: null,
+      bytes: new TextEncoder().encode("01234567"),
+    }],
     { minErrorCorrectionLevel: "H" },
   );
   expect(result.version).toEqual(1);
@@ -42,7 +45,10 @@ test("1-H digit example", () => {
 
 test("M3-M digit example", () => {
   const result = fitBytes(
-    new TextEncoder().encode("0123456789012345"),
+    [{
+      eciDesignator: null,
+      bytes: new TextEncoder().encode("0123456789012345"),
+    }],
     { minErrorCorrectionLevel: "M", allowMicroQR: true },
   );
   expect(result.version).toEqual("M3");

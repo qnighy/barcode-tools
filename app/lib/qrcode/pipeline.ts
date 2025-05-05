@@ -1,4 +1,5 @@
 import { BitExtMatrix } from "./bit-ext-matrix";
+import { BinaryParts } from "./compression";
 import { encodeErrorCorrection } from "./ecc";
 import { fitBytes } from "./fitting";
 import { fillFunctionPatterns, pourDataBits } from "./layout";
@@ -23,10 +24,11 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}
     allowMicroQR = false,
     minErrorCorrectionLevel = "NONE",
   } = options;
-  if (!/^[\x00-\x7F]*$/.test(text)) {
-    throw new Error("TODO: Support non-ASCII characters");
-  }
-  const data = new TextEncoder().encode(text);
+  const data: BinaryParts = [{
+    // 26 = UTF-8
+    eciDesignator: /^[\x00-\x7F]*$/.test(text) ? null : 26,
+    bytes: new TextEncoder().encode(text),
+  }];
   const { bits: bodyBits, version, errorCorrectionLevel, bodyBitLength } = fitBytes(data, {
     minErrorCorrectionLevel,
     allowMicroQR,

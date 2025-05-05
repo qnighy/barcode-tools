@@ -1,5 +1,5 @@
 import { Bits, BitWriter } from "./bit-writer";
-import { addFiller, BitOverflowError, compressBinaryParts } from "./compression";
+import { addFiller, BinaryParts, BitOverflowError, compressBinaryParts } from "./compression";
 import { CODING_SPECS, CodingVersion, ErrorCorrectionLevelOrNone, SPECS, Version } from "./specs";
 
 export type FitBytesOptions = {
@@ -31,7 +31,7 @@ const LEVEL_MAP: Record<ErrorCorrectionLevelOrNone, ErrorCorrectionLevelOrNone[]
   H: ["H"],
 };
 
-export function fitBytes(data: Uint8Array, options: FitBytesOptions): FitBytesResult {
+export function fitBytes(parts: BinaryParts, options: FitBytesOptions): FitBytesResult {
   const { minErrorCorrectionLevel, allowMicroQR = false } = options;
   const codingVersions: CodingVersion[] =
     allowMicroQR
@@ -49,10 +49,7 @@ export function fitBytes(data: Uint8Array, options: FitBytesOptions): FitBytesRe
     let compressed: BitWriter;
     try {
       compressed = compressBinaryParts(
-        [{
-          eciDesignator: null,
-          bytes: data,
-        }],
+        parts,
         maxVersionErrorCorrectionSpec.dataBits,
         CODING_SPECS[codingVersion]
       );

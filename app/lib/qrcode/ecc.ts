@@ -33,8 +33,8 @@ export function encodeErrorCorrection(
     const blockSize = i < blockSize1Count ? blockSize1 : blockSize2;
     const dataSize = blockSize - errorCorrectionSpec.numEccBytesEach;
     const dataSlice = bits.bytes.subarray(
-      blockSize1 * i + Math.max(0, i - blockSize1Count),
-      blockSize1 * i + Math.max(0, i - blockSize1Count) + dataSize,
+      dataSize1 * i + Math.max(0, i - blockSize1Count),
+      dataSize1 * i + Math.max(0, i - blockSize1Count) + dataSize,
     );
     for (let j = 0; j < dataSize1; j++) {
       outputBytes[errorCorrectionSpec.numEccBlocks * j + i] = dataSlice[j];
@@ -54,8 +54,8 @@ export function encodeErrorCorrection(
     const block = i < blockSize1Count ? block1 : blockBuffer;
 
     const dataSlice = bits.bytes.subarray(
-      blockSize1 * i + Math.max(0, i - blockSize1Count),
-      blockSize1 * i + Math.max(0, i - blockSize1Count) + dataSize
+      dataSize1 * i + Math.max(0, i - blockSize1Count),
+      dataSize1 * i + Math.max(0, i - blockSize1Count) + dataSize
     );
     block.set(dataSlice, 0);
     poly.generate(block);

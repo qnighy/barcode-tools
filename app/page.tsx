@@ -61,8 +61,11 @@ export default function Home(): ReactElement | null {
     }
   }, [svg]);
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+    <div className="grid justify-items-center p-8">
+      <main className="flex flex-col gap-[32px] row-start-2 align-items-center sm:items-start">
+        <h1 className="text-3xl font-bold text-center">
+          QR Code Generator
+        </h1>
         <textarea
           className="w-full h-[200px] p-4 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Enter text to generate QR code"
@@ -74,8 +77,12 @@ export default function Home(): ReactElement | null {
         <div className="text-sm text-gray-500">
           {percentage}
         </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {svgURL && <img className="max-h-lvh max-w-lvw" src={svgURL} alt="Generated QR Code" />}
+        <div
+          className="w-3xl flex flex-col place-content-center items-center"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {svgURL && <img className="max-h-lvh max-w-full" src={svgURL} alt="Generated QR Code" />}
+        </div>
       </main>
     </div>
   );

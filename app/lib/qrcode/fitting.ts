@@ -3,7 +3,7 @@ import { addFiller, BitOverflowError, maybeCompressBytes } from "./compression";
 import { CODING_SPECS, CodingVersion, ErrorCorrectionLevelOrNone, SPECS, Version } from "./specs";
 
 export type FitBytesOptions = {
-  errorCorrectionLevel: ErrorCorrectionLevelOrNone;
+  minErrorCorrectionLevel: ErrorCorrectionLevelOrNone;
   allowMicroQR?: boolean;
 };
 
@@ -31,14 +31,14 @@ const LEVEL_MAP: Record<ErrorCorrectionLevelOrNone, ErrorCorrectionLevelOrNone[]
 };
 
 export function fitBytes(data: Uint8Array, options: FitBytesOptions): FitBytesResult {
-  const { errorCorrectionLevel, allowMicroQR = false } = options;
+  const { minErrorCorrectionLevel, allowMicroQR = false } = options;
   const codingVersions: CodingVersion[] =
     allowMicroQR
       ? ["M1", "M2", "M3", "M4", 9, 26, 40]
       : [9, 26, 40];
   for (const codingVersion of codingVersions) {
     const maxVersionSpec = SPECS[codingVersion];
-    const modifiedLevelForMaxVersion = LEVEL_MAP[errorCorrectionLevel].find((level) => level in maxVersionSpec.errorCorrectionSpecs);
+    const modifiedLevelForMaxVersion = LEVEL_MAP[minErrorCorrectionLevel].find((level) => level in maxVersionSpec.errorCorrectionSpecs);
     if (!modifiedLevelForMaxVersion) {
       // Error correction level too high
       continue;
@@ -56,7 +56,7 @@ export function fitBytes(data: Uint8Array, options: FitBytesOptions): FitBytesRe
 
     for (const version of CODING_VERSION_VERSIONS[codingVersion]) {
       const spec = SPECS[version];
-      const modifiedLevel = LEVEL_MAP[errorCorrectionLevel].find((level) => level in spec.errorCorrectionSpecs);
+      const modifiedLevel = LEVEL_MAP[minErrorCorrectionLevel].find((level) => level in spec.errorCorrectionSpecs);
       if (!modifiedLevel) {
         // Error correction level too high
         continue;

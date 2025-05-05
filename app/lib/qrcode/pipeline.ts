@@ -21,7 +21,7 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}
   }
   const data = new TextEncoder().encode(text);
   const { bits: bodyBits, version, errorCorrectionLevel } = fitBytes(data, {
-    errorCorrectionLevel: minErrorCorrectionLevel,
+    minErrorCorrectionLevel,
     allowMicroQR,
   });
   const bitsWithEcc = encodeErrorCorrection(bodyBits, version, errorCorrectionLevel);

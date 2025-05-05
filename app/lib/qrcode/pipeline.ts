@@ -14,6 +14,7 @@ export type EncodeToMatrixOptions = {
 export type EncodeToMatrixResult = {
   version: Version;
   errorCorrectionLevel: ErrorCorrectionLevelOrNone;
+  bodyBitLength: number;
   matrix: BitExtMatrix;
 };
 
@@ -26,7 +27,7 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}
     throw new Error("TODO: Support non-ASCII characters");
   }
   const data = new TextEncoder().encode(text);
-  const { bits: bodyBits, version, errorCorrectionLevel } = fitBytes(data, {
+  const { bits: bodyBits, version, errorCorrectionLevel, bodyBitLength } = fitBytes(data, {
     minErrorCorrectionLevel,
     allowMicroQR,
   });
@@ -41,6 +42,7 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}
   return {
     version,
     errorCorrectionLevel,
+    bodyBitLength,
     matrix: mat,
   };
 }
@@ -53,6 +55,7 @@ export type EncodeToSVGOptions = {
 export type EncodeToSVGResult = {
   version: Version;
   errorCorrectionLevel: ErrorCorrectionLevelOrNone;
+  bodyBitLength: number;
   matrix: BitExtMatrix;
   svg: string;
 };
@@ -63,7 +66,7 @@ export function encodeToSVG(text: string, options: EncodeToSVGOptions = {}): Enc
     minErrorCorrectionLevel = "NONE",
   } = options;
 
-  const { version, errorCorrectionLevel, matrix } = encodeToMatrix(text, {
+  const { version, errorCorrectionLevel, bodyBitLength, matrix } = encodeToMatrix(text, {
     allowMicroQR,
     minErrorCorrectionLevel,
   });
@@ -73,6 +76,7 @@ export function encodeToSVG(text: string, options: EncodeToSVGOptions = {}): Enc
   return {
     version,
     errorCorrectionLevel,
+    bodyBitLength,
     matrix,
     svg,
   };

@@ -13,6 +13,7 @@ export type EncodeToQROptions = {
 export type EncodeToQRMatrixResult = {
   version: Version;
   errorCorrectionLevel: ErrorCorrectionLevelOrNone;
+  bodyBitLength: number;
   matrix: BitExtMatrix;
 };
 
@@ -24,6 +25,7 @@ export type EncodeToQRSVGResult = {
   version: Version;
   errorCorrectionLevel: ErrorCorrectionLevelOrNone;
   matrix: BitExtMatrix;
+  bodyBitLength: number;
   svg: string;
 };
 

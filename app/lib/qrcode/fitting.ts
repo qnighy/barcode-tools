@@ -11,6 +11,7 @@ export type FitBytesResult = {
   bits: Bits;
   version: Version;
   errorCorrectionLevel: ErrorCorrectionLevelOrNone;
+  bodyBitLength: number;
 };
 
 const CODING_VERSION_VERSIONS: Record<CodingVersion, Version[]> = {
@@ -74,11 +75,13 @@ export function fitBytes(data: Uint8Array, options: FitBytesOptions): FitBytesRe
       }
 
       // Found a version that fits. Finalize the result.
+      const bodyBitLength = compressed.bitLength;
       addFiller(compressed, errorCorrectionSpec.dataBits, CODING_SPECS[codingVersion]);
       return {
         bits: compressed.transferToBytes(),
         version,
         errorCorrectionLevel: modifiedLevel,
+        bodyBitLength,
       };
     }
   }

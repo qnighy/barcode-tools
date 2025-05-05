@@ -5,7 +5,17 @@ import { encodeToQRSVG } from "./lib/qrcode";
 
 export default function Home(): ReactElement | null {
   const [text, setText] = useState<string>("");
-  const svg = useMemo(() => encodeToQRSVG(text).svg, [text]);
+  const maxBitLength = 23648; // Version 40, L
+  const {
+    bodyBitLength,
+    svg,
+  } = useMemo(() => encodeToQRSVG(text), [text]);
+
+  const percentage = useMemo(() => {
+    const ratio = bodyBitLength / maxBitLength;
+    const fractionDigits = 3;
+    return `${(ratio * 100).toFixed(fractionDigits)}%`;
+  }, [bodyBitLength, maxBitLength]);
 
   const [svgURL, setSvgURL] = useState<string | null>(null);
   useEffect(() => {
@@ -26,6 +36,9 @@ export default function Home(): ReactElement | null {
             setText(e.target.value);
           }}
         />
+        <div className="text-sm text-gray-500">
+          {percentage}
+        </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {svgURL && <img className="max-h-lvh max-w-lvw" src={svgURL} alt="Generated QR Code" />}
       </main>

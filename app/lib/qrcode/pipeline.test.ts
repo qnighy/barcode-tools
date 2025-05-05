@@ -10,6 +10,7 @@ test("encodeToMatrix example on Annex I QR code", () => {
   expect(result).toEqual({
     version: 1,
     errorCorrectionLevel: "M",
+    bodyBitLength: 41,
     matrix: new BitExtMatrix(21, [
       3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 0, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3,
       3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 1, 1, 2, 3, 2, 2, 2, 2, 2, 3,

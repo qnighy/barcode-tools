@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { addFiller, CodingParameters, compressBytes } from "./compression";
+import { addFiller, CodingParameters, compressBinaryParts } from "./compression";
 import { Bits, BitWriter } from "./bit-writer";
 
 const M3Parameters: CodingParameters = {
@@ -29,8 +29,11 @@ const M3MMaxBits = 68;
 const V1HMaxBits = 72;
 
 test("digit example on 1-H symbol", () => {
-  const bits = compressBytes(
-    new TextEncoder().encode("01234567"),
+  const bits = compressBinaryParts(
+    [{
+      eciDesignator: null,
+      bytes: new TextEncoder().encode("01234567"),
+    }],
     V1HMaxBits,
     V9Parameters
   );
@@ -58,8 +61,11 @@ test("digit example on 1-H symbol", () => {
 });
 
 test("digit example on M3-M symbol", () => {
-  const bits = compressBytes(
-    new TextEncoder().encode("0123456789012345"),
+  const bits = compressBinaryParts(
+    [{
+      eciDesignator: null,
+      bytes: new TextEncoder().encode("0123456789012345"),
+    }],
     M3MMaxBits,
     M3Parameters
   );
@@ -95,8 +101,11 @@ test("digit example on M3-M symbol", () => {
 });
 
 test("alphanumeric example on 1-H symbol", () => {
-  const bits = compressBytes(
-    new TextEncoder().encode("AC-42"),
+  const bits = compressBinaryParts(
+    [{
+      eciDesignator: null,
+      bytes: new TextEncoder().encode("AC-42"),
+    }],
     V1HMaxBits,
     V9Parameters
   );
@@ -124,9 +133,12 @@ test("alphanumeric example on 1-H symbol", () => {
 });
 
 test("kanji example on 1-H symbol", () => {
-  const bits = compressBytes(
+  const bits = compressBinaryParts(
     // 935F (点), E4AA (茗)
-    new Uint8Array([0x93, 0x5F, 0xE4, 0xAA]),
+    [{
+      eciDesignator: null,
+      bytes: new Uint8Array([0x93, 0x5F, 0xE4, 0xAA]),
+    }],
     V1HMaxBits,
     V9Parameters
   );
@@ -152,8 +164,11 @@ test("kanji example on 1-H symbol", () => {
 });
 
 test("Mixed alphanumerics and digits", () => {
-  const bits = compressBytes(
-    new TextEncoder().encode("ZK-3235014"),
+  const bits = compressBinaryParts(
+    [{
+      eciDesignator: null,
+      bytes: new TextEncoder().encode("ZK-3235014"),
+    }],
     V1HMaxBits,
     V9Parameters
   );

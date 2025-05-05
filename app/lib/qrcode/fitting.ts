@@ -1,5 +1,5 @@
 import { Bits, BitWriter } from "./bit-writer";
-import { addFiller, BitOverflowError, compressBytes } from "./compression";
+import { addFiller, BitOverflowError, compressBinaryParts } from "./compression";
 import { CODING_SPECS, CodingVersion, ErrorCorrectionLevelOrNone, SPECS, Version } from "./specs";
 
 export type FitBytesOptions = {
@@ -48,8 +48,11 @@ export function fitBytes(data: Uint8Array, options: FitBytesOptions): FitBytesRe
     const maxVersionErrorCorrectionSpec = maxVersionSpec.errorCorrectionSpecs[modifiedLevelForMaxVersion]!;
     let compressed: BitWriter;
     try {
-      compressed = compressBytes(
-        data,
+      compressed = compressBinaryParts(
+        [{
+          eciDesignator: null,
+          bytes: data,
+        }],
         maxVersionErrorCorrectionSpec.dataBits,
         CODING_SPECS[codingVersion]
       );

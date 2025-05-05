@@ -38,26 +38,47 @@ export class BitOverflowError extends Error {
   }
 }
 
-export function compressBytes(
-  data: Uint8Array,
+export type BinaryParts = readonly BinaryPart[];
+export type BinaryPart = {
+  eciDesignator: number | null;
+  bytes: Uint8Array;
+};
+
+export function compressBinaryParts(
+  parts: BinaryParts,
   maxBits: number,
   params: CodingParameters,
 ): BitWriter {
+  const writer = new BitWriter();
+  for (const part of parts) {
+    const { eciDesignator, bytes } = part;
+    if (eciDesignator != null) {
+      throw new Error("TODO: ECI designator");
+    }
+    compressBytes(bytes, maxBits, params, writer);
+  }
+  return writer;
+}
+
+function compressBytes(
+  data: Uint8Array,
+  maxBits: number,
+  params: CodingParameters,
+  writer: BitWriter,
+): void {
   const finalNode = computeOptimumPath(data, params);
-  if (finalNode.cost / BIT_COST > maxBits) {
+  if (writer.bitLength + finalNode.cost / BIT_COST > maxBits) {
     throw new BitOverflowError({
-      bodyBitLength: finalNode.cost / BIT_COST,
+      bodyBitLength: writer.bitLength + finalNode.cost / BIT_COST,
       maxBitLength: maxBits,
     });
   }
 
   const modeChunks = reconstructPath(finalNode);
 
-  const writer = new BitWriter();
   for (const modeChunk of modeChunks) {
     writeChunk(writer, modeChunk, data, params);
   }
-  return writer;
 }
 
 /**

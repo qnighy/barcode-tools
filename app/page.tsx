@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactElement, useEffect, useMemo, useState } from "react";
-import { BitOverflowError, encodeToQRSVG } from "./lib/qrcode";
+import { BitOverflowError, encodeToQRSVG, ErrorCorrectionLevelOrNone } from "./lib/qrcode";
 
 type QRResult = QRSuccessResult | QRBitOverflowResult;
 type QRSuccessResult = {
@@ -16,12 +16,20 @@ type QRBitOverflowResult = {
   svg: null;
 };
 
+type SymbolType = "QR" | "MicroQR";
+
 export default function Home(): ReactElement | null {
+  const [symbolType, setSymbolType] = useState<SymbolType>("QR");
+  const [minErrorCorrectionLevel, setMinErrorCorrectionLevel] = useState<ErrorCorrectionLevelOrNone>("NONE");
+
   const [text, setText] = useState<string>("");
   const maxBitLength = 23648; // Version 40, L
   const result = useMemo<QRResult>(() => {
     try {
-      const { bodyBitLength, svg } = encodeToQRSVG(text);
+      const { bodyBitLength, svg } = encodeToQRSVG(text, {
+        allowMicroQR: symbolType === "MicroQR",
+        minErrorCorrectionLevel,
+      });
       return {
         type: "success",
         bodyBitLength,
@@ -38,7 +46,7 @@ export default function Home(): ReactElement | null {
       }
       throw e;
     }
-  }, [text]);
+  }, [text, symbolType, minErrorCorrectionLevel]);
 
   const { bodyBitLength, svg } = result;
 
@@ -66,6 +74,44 @@ export default function Home(): ReactElement | null {
         <h1 className="text-3xl font-bold text-center">
           QR Code Generator
         </h1>
+        <div className="flex flex-row gap-4">
+          <select
+            className="w-40 p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={symbolType}
+            onChange={(e) => {
+              setSymbolType(e.currentTarget.value as SymbolType);
+            }}
+          >
+            <option value="QR">QR Code</option>
+            <option value="MicroQR">Micro QR Code</option>
+          </select>
+          <select
+            className="w-50 p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={
+              symbolType === "QR" && minErrorCorrectionLevel === "L"
+              ? "NONE"
+              : minErrorCorrectionLevel
+            }
+            onChange={(e) => {
+              setMinErrorCorrectionLevel(e.currentTarget.value as ErrorCorrectionLevelOrNone);
+            }}
+          >
+            {
+              symbolType === "QR" &&
+                <option value="NONE">Error Correction: L</option>
+            }
+            {
+              symbolType === "MicroQR" &&
+                <>
+                  <option value="NONE">Error Correction: Any</option>
+                  <option value="L">Error Correction: L</option>
+                </>
+            }
+            <option value="M">Error Correction: M</option>
+            <option value="Q">Error Correction: Q</option>
+            <option value="H">Error Correction: H</option>
+          </select>
+        </div>
         <textarea
           className="w-full h-[200px] p-4 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Enter text to generate QR code"

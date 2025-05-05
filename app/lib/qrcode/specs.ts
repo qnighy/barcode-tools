@@ -118,9 +118,9 @@ export const CODING_SPECS: Record<CodingVersion, CodingVersionSpec> = Object.fre
     ECIModeIndicator: null,
     structuredAppendModeIndicator: null,
     digitModeCountBits: 3,
-    alphanumericModeCountBits: -1,
-    byteModeCountBits: -1,
-    kanjiModeCountBits: -1,
+    alphanumericModeCountBits: Infinity,
+    byteModeCountBits: Infinity,
+    kanjiModeCountBits: Infinity,
   },
   M2: {
     codingVersion: "M2",
@@ -135,8 +135,8 @@ export const CODING_SPECS: Record<CodingVersion, CodingVersionSpec> = Object.fre
     structuredAppendModeIndicator: null,
     digitModeCountBits: 4,
     alphanumericModeCountBits: 3,
-    byteModeCountBits: -1,
-    kanjiModeCountBits: -1,
+    byteModeCountBits: Infinity,
+    kanjiModeCountBits: Infinity,
   },
   M3: {
     codingVersion: "M3",

@@ -1,3 +1,4 @@
+import { Bit } from "./qrcode/bit";
 import { encodeToMatrix } from "./qrcode/pipeline";
 import { ErrorCorrectionLevelOrNone } from "./qrcode/specs";
 
@@ -8,6 +9,6 @@ export type EncodeQROptions = {
   minErrorCorrectionLevel?: ErrorCorrectionLevelOrNone;
 };
 
-export function encodeQRToMatrix(text: string, options: EncodeQROptions = {}): (0 | 1)[][] {
+export function encodeQRToMatrix(text: string, options: EncodeQROptions = {}): Bit[][] {
   return encodeToMatrix(text, options);
 }

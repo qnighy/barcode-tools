@@ -1,8 +1,9 @@
 import { expect, test } from "vitest";
 import { generateSVGPath } from "./svg";
+import { Bit } from "./bit";
 
 test("generateSVGPath", () => {
-  const mat: (0 | 1)[][] = [
+  const mat: Bit[][] = [
     // 30    50    70    90   110   130   150
     //    40    60    80   100   120   140
     [1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1], // 20

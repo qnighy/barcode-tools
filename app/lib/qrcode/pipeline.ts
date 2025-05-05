@@ -1,3 +1,4 @@
+import { Bit } from "./bit";
 import { encodeErrorCorrection } from "./ecc";
 import { fitBytes } from "./fitting";
 import { fillFunctionPatterns, pourDataBits } from "./layout";
@@ -9,7 +10,7 @@ export type EncodeToMatrixOptions = {
   minErrorCorrectionLevel?: ErrorCorrectionLevelOrNone;
 };
 
-export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}): (0 | 1)[][] {
+export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}): Bit[][] {
   const {
     allowMicroQR = false,
     minErrorCorrectionLevel = "NONE",
@@ -30,9 +31,9 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}
   pourDataBits(mat, version, bitsWithEcc);
   applyAutoMaskAndMetadata(mat, version, errorCorrectionLevel);
 
-  const result: (0 | 1)[][] = Array.from({ length: height }, (_, y) =>
+  const result: Bit[][] = Array.from({ length: height }, (_, y) =>
     Array.from({ length: width }, (_, x) =>
-      (mat[y * width + x] & 1) as (0 | 1)
+      (mat[y * width + x] & 1) as Bit
     )
   );
   return result;

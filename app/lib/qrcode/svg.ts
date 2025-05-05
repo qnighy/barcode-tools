@@ -1,3 +1,4 @@
+import { Bit } from "./bit";
 import { SPECS, Version } from "./specs";
 
 const DIR_DX = [1, 0, -1, 0];
@@ -9,7 +10,7 @@ export type GenerateSVGPathOptions = {
 
 export function generateSVGPath(
   version: Version,
-  mat: (0 | 1)[][],
+  mat: Bit[][],
   options: GenerateSVGPathOptions
 ): string {
   const { moduleSize } = options;
@@ -19,7 +20,7 @@ export function generateSVGPath(
   function idx(x: number, y: number, dir: number): number {
     return (y * (width + 1) + x) * 4 + dir;
   }
-  function getAt(x: number, y: number): 0 | 1 {
+  function getAt(x: number, y: number): Bit {
     if (x < 0 || x >= width || y < 0 || y >= height) {
       return 0;
     }

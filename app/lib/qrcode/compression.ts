@@ -6,6 +6,7 @@ export type CodingParameters = {
   alphanumericModeIndicator: number | null;
   byteModeIndicator: number | null;
   kanjiModeIndicator: number | null;
+  ECIModeIndicator: number | null;
   digitModeCountBits: number;
   alphanumericModeCountBits: number;
   byteModeCountBits: number;
@@ -50,12 +51,29 @@ export function compressBinaryParts(
   params: CodingParameters,
 ): BitWriter {
   const writer = new BitWriter();
+  let first = true;
   for (const part of parts) {
     const { eciDesignator, bytes } = part;
     if (eciDesignator != null) {
-      throw new Error("TODO: ECI designator");
+      if (params.ECIModeIndicator == null) {
+        throw new BitOverflowError({
+          bodyBitLength: Infinity,
+          maxBitLength: maxBits,
+        });
+      }
+      writer.pushNumber(params.ECIModeIndicator, params.modeIndicatorBits);
+      if (eciDesignator < 128) {
+        writer.pushNumber(eciDesignator & 0x7F, 8);
+      } else if (eciDesignator < 16384) {
+        writer.pushNumber((eciDesignator & 0x3FFF) | 0x8000, 16);
+      } else {
+        writer.pushNumber((eciDesignator & 0x1FFFFF) | 0xC00000, 24);
+      }
+    } else if (!first) {
+      throw new TypeError("ECI designator is required for all parts except the first");
     }
     compressBytes(bytes, maxBits, params, writer);
+    first = false;
   }
   return writer;
 }

@@ -8,6 +8,7 @@ const M3Parameters: CodingParameters = {
   alphanumericModeIndicator: 0b01,
   byteModeIndicator: 0b10,
   kanjiModeIndicator: 0b11,
+  ECIModeIndicator: null,
   digitModeCountBits: 5,
   alphanumericModeCountBits: 4,
   byteModeCountBits: 4,
@@ -19,6 +20,7 @@ const V9Parameters: CodingParameters = {
   alphanumericModeIndicator: 0b0010,
   byteModeIndicator: 0b0100,
   kanjiModeIndicator: 0b1000,
+  ECIModeIndicator: 0b0111,
   digitModeCountBits: 10,
   alphanumericModeCountBits: 9,
   byteModeCountBits: 8,
@@ -200,6 +202,44 @@ test("Mixed alphanumerics and digits", () => {
       // chunk 0100
       // pad       0000
       0b01000000,
+    ]),
+  } satisfies Bits);
+});
+
+test("ECI example on 1-H symbol", () => {
+  const bits = compressBinaryParts(
+    [
+      {
+        eciDesignator: 26,
+        bytes: new TextEncoder().encode("01234567"),
+      }
+    ],
+    V1HMaxBits,
+    V9Parameters
+  );
+  expect(bits.transferToBytes()).toEqual({
+    bitLength: 53,
+    bytes: new Uint8Array([
+      // mode  0111
+      // chunk     0001(1010)
+      0b01110001,
+      // ...   1010
+      // mode      0001
+      0b10100001,
+      // size  00000010(00)
+      0b00000010,
+      // ...   00
+      // chunk   000000(1100)
+      0b00000000,
+      // ...   1100
+      // chunk     0101(011001)
+      0b11000101,
+      // ...   011001
+      // chunk       10(00011)
+      0b01100110,
+      // ...   00011
+      // pad        000
+      0b00011000,
     ]),
   } satisfies Bits);
 });

@@ -1,4 +1,3 @@
-import { Bit } from "./qrcode/bit";
 import { BitExtMatrix } from "./qrcode/bit-ext-matrix";
 import { encodeToMatrix } from "./qrcode/pipeline";
 import { ErrorCorrectionLevelOrNone, Version } from "./qrcode/specs";

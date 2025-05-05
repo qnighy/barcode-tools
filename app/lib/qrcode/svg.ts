@@ -2,6 +2,31 @@ import { Bit } from "./bit";
 import { BitExtMatrix } from "./bit-ext-matrix";
 import { SPECS, Version } from "./specs";
 
+export type GenerateSVGFromMatrixOptions = {
+  moduleSize: number;
+};
+
+export function generateSVGFromMatrix(
+  version: Version,
+  mat: BitExtMatrix,
+  options: GenerateSVGFromMatrixOptions
+): string {
+  const { moduleSize } = options;
+  const { width, height, margin } = SPECS[version];
+
+  let svg: string = "";
+
+  const svgWidth = (width + margin * 2) * moduleSize;
+  const svgHeight = (height + margin * 2) * moduleSize;
+  svg += `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`;
+  svg += `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">`;
+  svg += `<rect width="${svgWidth}" height="${svgHeight}" fill="#fff"/>`;
+  const svgPath = generateSVGPath(version, mat, { moduleSize });
+  svg += `<path d="${svgPath}" fill="#000"/>`;
+  svg += `</svg>`;
+  return svg;
+}
+
 const DIR_DX = [1, 0, -1, 0];
 const DIR_DY = [0, 1, 0, -1];
 

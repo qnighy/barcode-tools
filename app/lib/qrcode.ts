@@ -1,5 +1,5 @@
 import { BitExtMatrix } from "./qrcode/bit-ext-matrix";
-import { encodeToMatrix } from "./qrcode/pipeline";
+import { encodeToMatrix, encodeToSVG } from "./qrcode/pipeline";
 import { ErrorCorrectionLevelOrNone, Version } from "./qrcode/specs";
 
 export type { ErrorCorrectionLevelOrNone, Version } from "./qrcode/specs";
@@ -18,4 +18,15 @@ export type EncodeToQRMatrixResult = {
 
 export function encodeToQRMatrix(text: string, options: EncodeToQROptions = {}): EncodeToQRMatrixResult {
   return encodeToMatrix(text, options);
+}
+
+export type EncodeToQRSVGResult = {
+  version: Version;
+  errorCorrectionLevel: ErrorCorrectionLevelOrNone;
+  matrix: BitExtMatrix;
+  svg: string;
+};
+
+export function encodeToQRSVG(text: string, options: EncodeToQROptions = {}): EncodeToQRSVGResult {
+  return encodeToSVG(text, options);
 }

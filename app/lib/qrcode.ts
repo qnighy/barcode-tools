@@ -4,7 +4,8 @@ import { ErrorCorrectionLevelOrNone, Version } from "./qrcode/specs";
 
 export type { ErrorCorrectionLevelOrNone, Version } from "./qrcode/specs";
 export { BitExtMatrix, BIT_VALUE_FLAG, METADATA_AREA_FLAG, FUNCTION_PATTERN_FLAG, NON_DATA_MASK } from "./qrcode/bit-ext-matrix";
-export { BitOverflowError } from "./qrcode/compression";
+export { BitOverflowError, UnsupportedContentError } from "./qrcode/compression";
+export type { BitOverflowErrorOptions, UnsupportedContentType, UnsupportedContentErrorOptions } from "./qrcode/compression";
 
 export type EncodeToQROptions = {
   allowMicroQR?: boolean;

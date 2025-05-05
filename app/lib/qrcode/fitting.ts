@@ -1,5 +1,5 @@
 import { Bits, BitWriter } from "./bit-writer";
-import { addFiller, BinaryParts, BitOverflowError, compressBinaryParts } from "./compression";
+import { addFiller, BinaryParts, BitOverflowError, compressBinaryParts, UnsupportedContentError } from "./compression";
 import { CODING_SPECS, CodingVersion, ErrorCorrectionLevelOrNone, SPECS, Version } from "./specs";
 
 export type FitBytesOptions = {
@@ -37,7 +37,7 @@ export function fitBytes(parts: BinaryParts, options: FitBytesOptions): FitBytes
     allowMicroQR
       ? ["M1", "M2", "M3", "M4", 9, 26, 40]
       : [9, 26, 40];
-  let lastError: BitOverflowError | undefined;
+  let lastError: BitOverflowError | UnsupportedContentError | undefined;
   for (const codingVersion of codingVersions) {
     const maxVersionSpec = SPECS[codingVersion];
     const modifiedLevelForMaxVersion = LEVEL_MAP[minErrorCorrectionLevel].find((level) => level in maxVersionSpec.errorCorrectionSpecs);
@@ -54,7 +54,7 @@ export function fitBytes(parts: BinaryParts, options: FitBytesOptions): FitBytes
         CODING_SPECS[codingVersion]
       );
     } catch (e) {
-      if (e instanceof BitOverflowError) {
+      if (e instanceof BitOverflowError || e instanceof UnsupportedContentError) {
         lastError = e;
         continue;
       }
@@ -85,8 +85,5 @@ export function fitBytes(parts: BinaryParts, options: FitBytesOptions): FitBytes
       };
     }
   }
-  throw lastError ?? new BitOverflowError({
-    bodyBitLength: -1,
-    maxBitLength: -1,
-  });
+  throw lastError ?? new Error("Unreachable: no exception set in fitBytes");
 }

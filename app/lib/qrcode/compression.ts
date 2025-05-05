@@ -39,6 +39,32 @@ export class BitOverflowError extends Error {
   }
 }
 
+export type UnsupportedContentType = "non-digit" | "non-alphanumeric" | "non-default-ECI";
+export type UnsupportedContentErrorOptions = {
+  unsupportedContentType: UnsupportedContentType;
+  maxBitLength: number;
+};
+export class UnsupportedContentError extends Error {
+  static {
+    this.prototype.name = "UnsupportedContentError";
+  }
+
+  unsupportedContentType: UnsupportedContentType;
+  maxBitLength: number;
+  constructor(options: UnsupportedContentErrorOptions) {
+    const { unsupportedContentType, maxBitLength } = options;
+    super(
+      unsupportedContentType === "non-digit"
+      ? "Only digits are encodable in this mode"
+      : unsupportedContentType === "non-alphanumeric"
+      ? "Only alphanumeric characters are encodable in this mode"
+      : "ECI designator is not supported in this mode",
+    );
+    this.unsupportedContentType = unsupportedContentType;
+    this.maxBitLength = maxBitLength;
+  }
+}
+
 export type BinaryParts = readonly BinaryPart[];
 export type BinaryPart = {
   eciDesignator: number | null;
@@ -56,8 +82,8 @@ export function compressBinaryParts(
     const { eciDesignator, bytes } = part;
     if (eciDesignator != null) {
       if (params.ECIModeIndicator == null) {
-        throw new BitOverflowError({
-          bodyBitLength: Infinity,
+        throw new UnsupportedContentError({
+          unsupportedContentType: "non-default-ECI",
           maxBitLength: maxBits,
         });
       }
@@ -84,6 +110,18 @@ function compressBytes(
   params: CodingParameters,
   writer: BitWriter,
 ): void {
+  if (params.alphanumericModeIndicator == null && !data.every(isDigit_)) {
+    throw new UnsupportedContentError({
+      unsupportedContentType: "non-digit",
+      maxBitLength: maxBits,
+    });
+  } else if (params.byteModeIndicator == null && !data.every(isAlphanumeric_)) {
+    throw new UnsupportedContentError({
+      unsupportedContentType: "non-alphanumeric",
+      maxBitLength: maxBits,
+    });
+  }
+
   const finalNode = computeOptimumPath(data, params);
   if (writer.bitLength + finalNode.cost / BIT_COST > maxBits) {
     throw new BitOverflowError({
@@ -144,24 +182,9 @@ function computeOptimumPath(data: Uint8Array, params: CodingParameters): CostNod
     const kanjiParity = (i + 1) & 1;
     const byte = data[i];
     // '0' - '9'
-    const isDigit = byte >= 0x30 && byte <= 0x39;
-    const isAlphanumeric =
-      // '0' - '9'
-      isDigit ||
-      // 'A' - 'Z'
-      (byte >= 0x41 && byte <= 0x5A) ||
-      // ' ', '$', '%', '*', '+', '-', '.', '/'
-      (byte >= 0x20 && byte <= 0x2F && ALPHANUMERIC_SYMBOL_MAP[byte - 0x20]) ||
-      // ':'
-      byte === 0x3A;
-    let isKanji = false;
-    if (byte >= 0x40 && byte <= 0xFC && i > 0) {
-      const prevByte = data[i - 1];
-      isKanji =
-        (prevByte >= 0x81 && prevByte <= 0x9F) ||
-        (prevByte >= 0xE0 && prevByte < 0xEB) ||
-        (prevByte === 0xEB && byte <= 0xBF);
-    }
+    const isDigit = isDigit_(byte);
+    const isAlphanumeric = isAlphanumeric_(byte);
+    const isKanji = i > 0 && isKanji_(data[i - 1], byte);
 
     if (isDigit) {
       if (currentDigitCost > currentNeutralCost + digitSwitchCost) {
@@ -311,6 +334,10 @@ function writeChunk(
   }
 }
 
+function isDigit_(byte: number): boolean {
+  return byte >= 0x30 && byte <= 0x39;
+}
+
 function writeDigitChunk(
   writer: BitWriter,
   modeChunk: ModeChunk,
@@ -338,6 +365,19 @@ function writeDigitChunk(
       writer.pushNumber(value, 10);
     }
   }
+}
+
+function isAlphanumeric_(byte: number): boolean {
+  return (
+    // '0' - '9'
+    (byte >= 0x30 && byte <= 0x39) ||
+    // 'A' - 'Z'
+    (byte >= 0x41 && byte <= 0x5A) ||
+    // ' ', '$', '%', '*', '+', '-', '.', '/'
+    (byte >= 0x20 && byte <= 0x2F && ALPHANUMERIC_SYMBOL_MAP[byte - 0x20] != null) ||
+    // ':'
+    byte === 0x3A
+  );
 }
 
 function writeAlphanumericChunk(
@@ -393,6 +433,17 @@ function writeByteChunk(
     const byte = data[i];
     writer.pushNumber(byte, 8);
   }
+}
+
+function isKanji_(prevByte: number, byte: number): boolean {
+  if (byte >= 0x40 && byte <= 0xFC) {
+    return (
+      (prevByte >= 0x81 && prevByte <= 0x9F) ||
+      (prevByte >= 0xE0 && prevByte < 0xEB) ||
+      (prevByte === 0xEB && byte <= 0xBF)
+    );
+  }
+  return false;
 }
 
 function writeKanjiChunk(

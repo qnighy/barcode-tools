@@ -1,9 +1,9 @@
 "use client";
 
 import { ReactElement, useEffect, useMemo, useState } from "react";
-import { BitOverflowError, encodeToQRSVG, ErrorCorrectionLevelOrNone } from "./lib/qrcode";
+import { BitOverflowError, UnsupportedContentError, encodeToQRSVG, ErrorCorrectionLevelOrNone } from "./lib/qrcode";
 
-type QRResult = QRSuccessResult | QRBitOverflowResult;
+type QRResult = QRSuccessResult | QRBitOverflowResult | QRUnsupportedContentResult;
 type QRSuccessResult = {
   type: "success";
   bodyBitLength: number;
@@ -13,6 +13,14 @@ type QRBitOverflowResult = {
   type: "BitOverflow";
   error: BitOverflowError;
   bodyBitLength: number;
+  maxBitLength: number;
+  svg: null;
+};
+type QRUnsupportedContentResult = {
+  type: "UnsupportedContent";
+  error: UnsupportedContentError;
+  bodyBitLength: number;
+  maxBitLength: number;
   svg: null;
 };
 
@@ -24,7 +32,7 @@ export default function Home(): ReactElement | null {
 
   const [text, setText] = useState<string>("");
   const maxBitLength = 23648; // Version 40, L
-  const result = useMemo<QRResult>(() => {
+  const result = useMemo<QRResult>((): QRResult => {
     try {
       const { bodyBitLength, svg } = encodeToQRSVG(text, {
         allowMicroQR: symbolType === "MicroQR",
@@ -41,6 +49,15 @@ export default function Home(): ReactElement | null {
           type: "BitOverflow",
           error: e,
           bodyBitLength: e.bodyBitLength,
+          maxBitLength: e.maxBitLength,
+          svg: null,
+        };
+      } else if (e instanceof UnsupportedContentError) {
+        return {
+          type: "UnsupportedContent",
+          error: e,
+          bodyBitLength: Infinity,
+          maxBitLength: e.maxBitLength,
           svg: null,
         };
       }

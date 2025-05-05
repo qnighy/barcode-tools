@@ -4,8 +4,7 @@ import { SPECS, Version, VERSIONS } from "./specs";
 import { Bits } from "./bit-writer";
 
 function getFunctionPatterns(version: Version): Uint8Array {
-  const { width } = SPECS[version];
-  const height = width;
+  const { width, height } = SPECS[version];
   const mat = new Uint8Array(width * height);
   fillFunctionPatterns(mat, version);
   return mat;
@@ -244,8 +243,7 @@ test("Function patterns for Version 7", () => {
 const cyrillic = "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя";
 
 function renderBitPositionsA(version: Version): string {
-  const { width } = SPECS[version];
-  const height = width;
+  const { width, height } = SPECS[version];
   const mat = new Uint8Array(width * height);
   fillFunctionPatterns(mat, version);
   const mat2 = Array.from({ length: height }, () => Array.from({ length: width }, () => "\u2592"));
@@ -336,8 +334,7 @@ test("bitPositions for Version 7 (2)", () => {
 });
 
 function* bitPositions2(version: Version): IterableIterator<[number, number]> {
-  const { width } = SPECS[version];
-  const height = width;
+  const { width, height } = SPECS[version];
   const mat = new Uint8Array(width * height);
   fillFunctionPatterns(mat, version);
   yield* bitPositions(mat, version);
@@ -345,10 +342,10 @@ function* bitPositions2(version: Version): IterableIterator<[number, number]> {
 
 for (const version of VERSIONS) {
   test(`bitPositions value range for version ${version}`, () => {
-    const { width } = SPECS[version];
+    const { width, height } = SPECS[version];
     const violations: [number, number][] = [];
     for (const [x, y] of bitPositions2(version)) {
-      if (x < 0 || x >= width || y < 0 || y >= width) {
+      if (x < 0 || x >= width || y < 0 || y >= height) {
         violations.push([x, y]);
       }
     }
@@ -410,8 +407,8 @@ test("pourDataBits as in Annex I QR code", () => {
     ]),
   };
 
-  const { width } = SPECS[version];
-  const mat = new Uint8Array(width * width);
+  const { width, height } = SPECS[version];
+  const mat = new Uint8Array(width * height);
   fillFunctionPatterns(mat, version);
   pourDataBits(mat, version, input);
 
@@ -458,8 +455,8 @@ test("pourDataBits as in Annex I MicroQR code", () => {
     ]),
   };
 
-  const { width } = SPECS[version];
-  const mat = new Uint8Array(width * width);
+  const { width, height } = SPECS[version];
+  const mat = new Uint8Array(width * height);
   fillFunctionPatterns(mat, version);
   pourDataBits(mat, version, input);
 

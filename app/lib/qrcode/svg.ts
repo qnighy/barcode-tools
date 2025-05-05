@@ -13,8 +13,7 @@ export function generateSVGPath(
   options: GenerateSVGPathOptions
 ): string {
   const { moduleSize } = options;
-  const { width, margin } = SPECS[version];
-  const height = width;
+  const { width, height, margin } = SPECS[version];
 
   const SIZE = (height + 1) * (width + 1) * 4;
   function idx(x: number, y: number, dir: number): number {

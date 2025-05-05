@@ -45,6 +45,7 @@ export type VersionSpec = {
   version: Version;
   margin: number;
   width: number;
+  height: number;
   finderPatternTotalSize: number;
   timingPatternTotalSize: number;
   alignmentGridWidth: number;
@@ -228,6 +229,7 @@ function getVersionSpec(version: Version): VersionSpec {
     isMicro
       ? versionNumber * 2 + 9
       : versionNumber * 4 + 17;
+  const height = width;
   const finderPatternTotalSize = isMicro ? FINDER_PATTERN_SIZE : FINDER_PATTERN_SIZE * 3;
   const timingPatternTotalSize = isMicro ? versionNumber * 4 + 2 : versionNumber * 8 + 2;
   const alignmentGridWidth =
@@ -247,7 +249,7 @@ function getVersionSpec(version: Version): VersionSpec {
   const versionInfoSize = isMicro || versionNumber <= 6 ? 0 : 36;
   const formatAndVersionInfoSize = formatInfoSize + versionInfoSize;
   const dataCapacityBits =
-    width * width - functionPatternTotalSize - formatAndVersionInfoSize;
+    width * height - functionPatternTotalSize - formatAndVersionInfoSize;
   const truncatedDataCapacityBits =
     isMicro
       ? dataCapacityBits
@@ -348,6 +350,7 @@ function getVersionSpec(version: Version): VersionSpec {
     version,
     margin,
     width,
+    height,
     finderPatternTotalSize,
     timingPatternTotalSize,
     alignmentGridWidth,

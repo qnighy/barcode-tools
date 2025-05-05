@@ -24,8 +24,7 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}
   });
   const bitsWithEcc = encodeErrorCorrection(bodyBits, version, errorCorrectionLevel);
 
-  const { width } = SPECS[version];
-  const height = width;
+  const { width, height } = SPECS[version];
   const mat = new Uint8Array(width * height);
   fillFunctionPatterns(mat, version);
   pourDataBits(mat, version, bitsWithEcc);

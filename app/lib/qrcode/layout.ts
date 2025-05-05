@@ -10,8 +10,7 @@ export function fillFunctionPatterns(
   version: Version,
 ): void {
   const spec = SPECS[version];
-  const { width } = spec;
-  const height = width;
+  const { width, height } = spec;
   if (mat.length !== width * height) {
     throw new RangeError(`Invalid matrix size: ${mat.length}, expected ${width * height}`);
   }
@@ -169,8 +168,7 @@ export function* bitPositions(mat: Uint8Array, version: Version): IterableIterat
 }
 
 function* rawBitPositions(version: Version): IterableIterator<[number, number]> {
-  const { width } = SPECS[version];
-  const height = width;
+  const { width, height } = SPECS[version];
   const timingPatternX = isMicroQRVersion(version) ? 0 : 6;
   const numColumns = (width - 1) / 2;
   for (let col = numColumns - 1; col >= 0; col--) {
@@ -273,8 +271,7 @@ function pourQRMetadataBits(
   mask: number
 ): void {
   const spec = SPECS[version];
-  const { width } = spec;
-  const height = width;
+  const { width, height } = spec;
   const eccLevelNumber = QR_ECC_LEVEL_NUMBERS[errorCorrectionLevel];
   if (eccLevelNumber == null) {
     throw new RangeError(`Invalid error correction level ${errorCorrectionLevel} for version ${version}`);

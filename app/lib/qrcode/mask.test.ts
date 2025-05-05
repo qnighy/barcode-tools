@@ -4,8 +4,7 @@ import { applyAutoMaskAndMetadata, applyMask, evaluateMaskDetail } from "./mask"
 import { SPECS, Version } from "./specs";
 
 function renderMaskPattern(version: Version, mask: number): string {
-  const { width } = SPECS[version];
-  const height = width;
+  const { width, height } = SPECS[version];
   const mat = new Uint8Array(width * height);
   fillFunctionPatterns(mat, version);
   applyMask(mat, version, mask);

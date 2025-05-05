@@ -58,8 +58,7 @@ export function applyMask(
   version: Version,
   mask: number
 ): void {
-  const { width } = SPECS[version];
-  const height = width;
+  const { width, height } = SPECS[version];
   const maskFunction = isMicroQRVersion(version) ? MICRO_QR_MASKS[mask] : QR_MASKS[mask];
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -119,8 +118,7 @@ function evaluateSegmentPenalty(
 ): number {
   const N1 = 3;
 
-  const { width } = SPECS[version];
-  const height = width;
+  const { width, height } = SPECS[version];
 
   let penalty = 0;
   for (let y = 0; y < height; y++) {
@@ -170,8 +168,7 @@ function evaluate2x2BlockPenalty(
 ): number {
   const N2 = 3;
 
-  const { width } = SPECS[version];
-  const height = width;
+  const { width, height } = SPECS[version];
 
   let num2x2Blocks = 0;
   for (let y = 0; y < height - 1; y++) {
@@ -201,8 +198,7 @@ function evaluatePseudoFinderPenalty(
 ): number {
   const N3 = 40;
 
-  const { width } = SPECS[version];
-  const height = width;
+  const { width, height } = SPECS[version];
 
   // There are always 18 pseudo finders that originates from the real finder.
   let numPseudoFinders = -18;
@@ -292,8 +288,7 @@ function evaluateQRNonUniformityPenalty(
 ): number {
   const N4 = 10;
 
-  const { width } = SPECS[version];
-  const height = width;
+  const { width, height } = SPECS[version];
   let bitCount = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -310,8 +305,7 @@ function evaluateMicroQRMask(
   mat: Uint8Array,
   version: Version
 ): number {
-  const { width } = SPECS[version];
-  const height = width;
+  const { width, height } = SPECS[version];
 
   let vCount = 0;
   // Starting from 1 to skip the timing pattern

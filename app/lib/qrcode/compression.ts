@@ -18,9 +18,23 @@ const ALPHANUMERIC_SYMBOL_MAP = [
   36,  0,  0,  0, 37, 38,  0,  0,  0,  0, 39, 40,  0, 41, 42, 43,
 ];
 
+export type BitOverflowErrorOptions = {
+  bodyBitLength: number;
+  maxBitLength: number;
+};
 export class BitOverflowError extends Error {
   static {
     this.prototype.name = "BitOverflowError";
+  }
+
+  bodyBitLength: number;
+  maxBitLength: number;
+
+  constructor(options: BitOverflowErrorOptions) {
+    const { bodyBitLength, maxBitLength } = options;
+    super(`Bit overflow: got ${bodyBitLength} bits for ${maxBitLength} capacity`);
+    this.bodyBitLength = bodyBitLength;
+    this.maxBitLength = maxBitLength;
   }
 }
 
@@ -31,7 +45,10 @@ export function compressBytes(
 ): BitWriter {
   const finalNode = computeOptimumPath(data, params);
   if (finalNode.cost / BIT_COST > maxBits) {
-    throw new BitOverflowError(`Bit overflow: got ${finalNode.cost / BIT_COST} bits for ${maxBits} capacity`);
+    throw new BitOverflowError({
+      bodyBitLength: finalNode.cost / BIT_COST,
+      maxBitLength: maxBits,
+    });
   }
 
   const modeChunks = reconstructPath(finalNode);

@@ -85,5 +85,8 @@ export function fitBytes(data: Uint8Array, options: FitBytesOptions): FitBytesRe
       };
     }
   }
-  throw lastError ?? new BitOverflowError("Bit overflow");
+  throw lastError ?? new BitOverflowError({
+    bodyBitLength: -1,
+    maxBitLength: -1,
+  });
 }

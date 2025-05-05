@@ -1,5 +1,5 @@
-import { Bits } from "./bit-writer";
-import { addFiller, BitOverflowError, maybeCompressBytes } from "./compression";
+import { Bits, BitWriter } from "./bit-writer";
+import { addFiller, BitOverflowError, compressBytes } from "./compression";
 import { CODING_SPECS, CodingVersion, ErrorCorrectionLevelOrNone, SPECS, Version } from "./specs";
 
 export type FitBytesOptions = {
@@ -36,6 +36,7 @@ export function fitBytes(data: Uint8Array, options: FitBytesOptions): FitBytesRe
     allowMicroQR
       ? ["M1", "M2", "M3", "M4", 9, 26, 40]
       : [9, 26, 40];
+  let lastError: BitOverflowError | undefined;
   for (const codingVersion of codingVersions) {
     const maxVersionSpec = SPECS[codingVersion];
     const modifiedLevelForMaxVersion = LEVEL_MAP[minErrorCorrectionLevel].find((level) => level in maxVersionSpec.errorCorrectionSpecs);
@@ -44,14 +45,19 @@ export function fitBytes(data: Uint8Array, options: FitBytesOptions): FitBytesRe
       continue;
     }
     const maxVersionErrorCorrectionSpec = maxVersionSpec.errorCorrectionSpecs[modifiedLevelForMaxVersion]!;
-    const compressed = maybeCompressBytes(
-      data,
-      maxVersionErrorCorrectionSpec.dataBits,
-      CODING_SPECS[codingVersion]
-    );
-    if (!compressed) {
-      // Data too large
-      continue;
+    let compressed: BitWriter;
+    try {
+      compressed = compressBytes(
+        data,
+        maxVersionErrorCorrectionSpec.dataBits,
+        CODING_SPECS[codingVersion]
+      );
+    } catch (e) {
+      if (e instanceof BitOverflowError) {
+        lastError = e;
+        continue;
+      }
+      throw e;
     }
 
     for (const version of CODING_VERSION_VERSIONS[codingVersion]) {
@@ -76,5 +82,5 @@ export function fitBytes(data: Uint8Array, options: FitBytesOptions): FitBytesRe
       };
     }
   }
-  throw new BitOverflowError(`Bit overflow`);
+  throw lastError ?? new BitOverflowError("Bit overflow");
 }

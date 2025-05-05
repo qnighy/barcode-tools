@@ -23,25 +23,15 @@ export class BitOverflowError extends Error {
     this.prototype.name = "BitOverflowError";
   }
 }
-export function compressBytes(data: Uint8Array, maxBits: number, params: CodingParameters): BitWriter {
-  return compressBytesImpl(data, maxBits, params, (bits: number) => {
-    throw new BitOverflowError(`Bit overflow: got ${bits} bits for ${maxBits} capacity`);
-  });
-}
 
-export function maybeCompressBytes(data: Uint8Array, maxBits: number, params: CodingParameters): BitWriter | null {
-  return compressBytesImpl(data, maxBits, params, () => null);
-}
-
-export function compressBytesImpl<T>(
+export function compressBytes(
   data: Uint8Array,
   maxBits: number,
   params: CodingParameters,
-  onOverflow: (bits: number) => T
-): BitWriter | T {
+): BitWriter {
   const finalNode = computeOptimumPath(data, params);
   if (finalNode.cost / BIT_COST > maxBits) {
-    return onOverflow(finalNode.cost / BIT_COST);
+    throw new BitOverflowError(`Bit overflow: got ${finalNode.cost / BIT_COST} bits for ${maxBits} capacity`);
   }
 
   const modeChunks = reconstructPath(finalNode);

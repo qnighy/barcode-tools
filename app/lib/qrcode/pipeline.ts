@@ -1,17 +1,22 @@
-import { Bit } from "./bit";
 import { BitExtMatrix } from "./bit-ext-matrix";
 import { encodeErrorCorrection } from "./ecc";
 import { fitBytes } from "./fitting";
 import { fillFunctionPatterns, pourDataBits } from "./layout";
 import { applyAutoMaskAndMetadata } from "./mask";
-import { ErrorCorrectionLevelOrNone, SPECS } from "./specs";
+import { ErrorCorrectionLevelOrNone, SPECS, Version } from "./specs";
 
 export type EncodeToMatrixOptions = {
   allowMicroQR?: boolean;
   minErrorCorrectionLevel?: ErrorCorrectionLevelOrNone;
 };
 
-export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}): Bit[][] {
+export type EncodeToMatrixResult = {
+  version: Version;
+  errorCorrectionLevel: ErrorCorrectionLevelOrNone;
+  matrix: BitExtMatrix;
+};
+
+export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}): EncodeToMatrixResult {
   const {
     allowMicroQR = false,
     minErrorCorrectionLevel = "NONE",
@@ -32,9 +37,10 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}
   pourDataBits(mat, version, bitsWithEcc);
   applyAutoMaskAndMetadata(mat, version, errorCorrectionLevel);
 
-  const result: Bit[][] = Array.from({ length: height }, (_, y) =>
-    Array.from({ length: width }, (_, x) => mat.getAt(x, y))
-  );
-  return result;
+  return {
+    version,
+    errorCorrectionLevel,
+    matrix: mat,
+  };
 }
 

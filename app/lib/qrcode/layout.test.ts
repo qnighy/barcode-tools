@@ -2,16 +2,17 @@ import { expect, test } from "vitest";
 import { bitPositions, fillFunctionPatterns, pourDataBits, pourMetadataBits } from "./layout";
 import { SPECS, Version, VERSIONS } from "./specs";
 import { Bits } from "./bit-writer";
+import { BitExtMatrix, METADATA_AREA_FLAG, NON_DATA_MASK } from "./bit-ext-matrix";
 
-function getFunctionPatterns(version: Version): Uint8Array {
+function getFunctionPatterns(version: Version): BitExtMatrix {
   const { width, height } = SPECS[version];
-  const mat = new Uint8Array(width * height);
+  const mat = new BitExtMatrix(width, height);
   fillFunctionPatterns(mat, version);
   return mat;
 }
 
 test("Function patterns for Version M1", () => {
-  expect(getFunctionPatterns("M1")).toEqual(new Uint8Array([
+  expect(getFunctionPatterns("M1")).toEqual(new BitExtMatrix(11, [
     3,3,3,3,3,3,3,2,3,2,3,
     3,2,2,2,2,2,3,2,4,0,0,
     3,2,3,3,3,2,3,2,4,0,0,
@@ -27,7 +28,7 @@ test("Function patterns for Version M1", () => {
 });
 
 test("Function patterns for Version M2", () => {
-  expect(getFunctionPatterns("M2")).toEqual(new Uint8Array([
+  expect(getFunctionPatterns("M2")).toEqual(new BitExtMatrix(13, [
    3,3,3,3,3,3,3,2,3,2,3,2,3,
    3,2,2,2,2,2,3,2,4,0,0,0,0,
    3,2,3,3,3,2,3,2,4,0,0,0,0,
@@ -45,7 +46,7 @@ test("Function patterns for Version M2", () => {
 });
 
 test("Function patterns for Version M3", () => {
-  expect(getFunctionPatterns("M3")).toEqual(new Uint8Array([
+  expect(getFunctionPatterns("M3")).toEqual(new BitExtMatrix(15, [
    3,3,3,3,3,3,3,2,3,2,3,2,3,2,3,
    3,2,2,2,2,2,3,2,4,0,0,0,0,0,0,
    3,2,3,3,3,2,3,2,4,0,0,0,0,0,0,
@@ -65,7 +66,7 @@ test("Function patterns for Version M3", () => {
 });
 
 test("Function patterns for Version M4", () => {
-  expect(getFunctionPatterns("M4")).toEqual(new Uint8Array([
+  expect(getFunctionPatterns("M4")).toEqual(new BitExtMatrix(17, [
    3,3,3,3,3,3,3,2,3,2,3,2,3,2,3,2,3,
    3,2,2,2,2,2,3,2,4,0,0,0,0,0,0,0,0,
    3,2,3,3,3,2,3,2,4,0,0,0,0,0,0,0,0,
@@ -87,7 +88,7 @@ test("Function patterns for Version M4", () => {
 });
 
 test("Function patterns for Version 1", () => {
-  expect(getFunctionPatterns(1)).toEqual(new Uint8Array([
+  expect(getFunctionPatterns(1)).toEqual(new BitExtMatrix(21, [
     3,3,3,3,3,3,3,2,4,0,0,0,0,2,3,3,3,3,3,3,3,
     3,2,2,2,2,2,3,2,4,0,0,0,0,2,3,2,2,2,2,2,3,
     3,2,3,3,3,2,3,2,4,0,0,0,0,2,3,2,3,3,3,2,3,
@@ -113,7 +114,7 @@ test("Function patterns for Version 1", () => {
 });
 
 test("Function patterns for Version 2", () => {
-  expect(getFunctionPatterns(2)).toEqual(new Uint8Array([
+  expect(getFunctionPatterns(2)).toEqual(new BitExtMatrix(25, [
     3,3,3,3,3,3,3,2,4,0,0,0,0,0,0,0,0,2,3,3,3,3,3,3,3,
     3,2,2,2,2,2,3,2,4,0,0,0,0,0,0,0,0,2,3,2,2,2,2,2,3,
     3,2,3,3,3,2,3,2,4,0,0,0,0,0,0,0,0,2,3,2,3,3,3,2,3,
@@ -143,7 +144,7 @@ test("Function patterns for Version 2", () => {
 });
 
 test("Function patterns for Version 6", () => {
-  expect(getFunctionPatterns(6)).toEqual(new Uint8Array([
+  expect(getFunctionPatterns(6)).toEqual(new BitExtMatrix(41, [
     3,3,3,3,3,3,3,2,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,3,3,3,3,3,3,3,
     3,2,2,2,2,2,3,2,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,3,2,2,2,2,2,3,
     3,2,3,3,3,2,3,2,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,3,2,3,3,3,2,3,
@@ -189,7 +190,7 @@ test("Function patterns for Version 6", () => {
 });
 
 test("Function patterns for Version 7", () => {
-  expect(getFunctionPatterns(7)).toEqual(new Uint8Array([
+  expect(getFunctionPatterns(7)).toEqual(new BitExtMatrix(45, [
     3,3,3,3,3,3,3,2,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,2,3,3,3,3,3,3,3,
     3,2,2,2,2,2,3,2,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,2,3,2,2,2,2,2,3,
     3,2,3,3,3,2,3,2,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,2,3,2,3,3,3,2,3,
@@ -244,15 +245,15 @@ const cyrillic = "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮ
 
 function renderBitPositionsA(version: Version): string {
   const { width, height } = SPECS[version];
-  const mat = new Uint8Array(width * height);
+  const mat = new BitExtMatrix(width, height);
   fillFunctionPatterns(mat, version);
   const mat2 = Array.from({ length: height }, () => Array.from({ length: width }, () => "\u2592"));
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const byte = mat[y * width + x];
-      if (byte & 4) {
+      const byte = mat.getExtAt(x, y);
+      if (byte & METADATA_AREA_FLAG) {
         mat2[y][x] = "\u2593";
-      } else if (byte & -2) {
+      } else if (byte & NON_DATA_MASK) {
         mat2[y][x] = byte & 1 ? "\u2588" : "\u2592";
       }
     }
@@ -335,7 +336,7 @@ test("bitPositions for Version 7 (2)", () => {
 
 function* bitPositions2(version: Version): IterableIterator<[number, number]> {
   const { width, height } = SPECS[version];
-  const mat = new Uint8Array(width * height);
+  const mat = new BitExtMatrix(width, height);
   fillFunctionPatterns(mat, version);
   yield* bitPositions(mat, version);
 }
@@ -408,11 +409,11 @@ test("pourDataBits as in Annex I QR code", () => {
   };
 
   const { width, height } = SPECS[version];
-  const mat = new Uint8Array(width * height);
+  const mat = new BitExtMatrix(width, height);
   fillFunctionPatterns(mat, version);
   pourDataBits(mat, version, input);
 
-  expect(mat).toEqual(new Uint8Array([
+  expect(mat).toEqual(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 1, 0, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 1, 1, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 0, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -456,11 +457,11 @@ test("pourDataBits as in Annex I MicroQR code", () => {
   };
 
   const { width, height } = SPECS[version];
-  const mat = new Uint8Array(width * height);
+  const mat = new BitExtMatrix(width, height);
   fillFunctionPatterns(mat, version);
   pourDataBits(mat, version, input);
 
-  expect(mat).toEqual(new Uint8Array([
+  expect(mat).toEqual(new BitExtMatrix(13, [
     3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 0, 0,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 0, 1, 1,
@@ -479,7 +480,8 @@ test("pourDataBits as in Annex I MicroQR code", () => {
 
 test("pourMetadataBits as in Annex I QR code", () => {
   const version: Version = 1;
-  const mat = new Uint8Array([
+  const { width } = SPECS[version];
+  const mat = new BitExtMatrix(width, [
     3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 0, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 1, 1, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 0, 0, 0, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -503,7 +505,7 @@ test("pourMetadataBits as in Annex I QR code", () => {
     3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0,
   ]);
   pourMetadataBits(mat, version, "M", 0b010);
-  expect(mat).toEqual(new Uint8Array([
+  expect(mat).toEqual(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 0, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 1, 1, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 0, 0, 0, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -530,7 +532,8 @@ test("pourMetadataBits as in Annex I QR code", () => {
 
 test("pourMetadataBits as in Annex I Micro QR code", () => {
   const version: Version = "M2";
-  const mat = new Uint8Array([
+  const { width } = SPECS[version];
+  const mat = new BitExtMatrix(width, [
     3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 0, 1,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 1, 0, 1,
@@ -546,7 +549,7 @@ test("pourMetadataBits as in Annex I Micro QR code", () => {
     3, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1,
   ]);
   pourMetadataBits(mat, version, "L", 0b01);
-  expect(mat).toEqual(new Uint8Array([
+  expect(mat).toEqual(new BitExtMatrix(13, [
     3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 5, 1, 1, 0, 1,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 1, 0, 1,

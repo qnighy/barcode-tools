@@ -1,3 +1,5 @@
+import { Bit } from "./bit";
+import { BitExtMatrix, NON_DATA_MASK } from "./bit-ext-matrix";
 import { pourMetadataBits } from "./layout";
 import { ErrorCorrectionLevelOrNone, isMicroQRVersion, SPECS, Version } from "./specs";
 
@@ -22,17 +24,17 @@ const QR_MASKS: MaskFunction[] = [
 ];
 
 export function applyAutoMaskAndMetadata(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version,
   errorCorrectionLevel: ErrorCorrectionLevelOrNone
 ): void {
   const numMasks = isMicroQRVersion(version) ? 4 : 8;
-  const tmpMat = mat.slice();
+  const tmpMat = mat.clone();
   applyMaskAndMetadata(tmpMat, version, errorCorrectionLevel, 0);
   let optimalMask = 0;
   let optimalScore = evaluateMask(tmpMat, version);
   for (let mask = 1; mask < numMasks; mask++) {
-    tmpMat.set(mat);
+    tmpMat.array.set(mat.array);
     applyMaskAndMetadata(tmpMat, version, errorCorrectionLevel, mask);
     const score = evaluateMask(tmpMat, version);
     if (score > optimalScore) {
@@ -44,7 +46,7 @@ export function applyAutoMaskAndMetadata(
 }
 
 export function applyMaskAndMetadata(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version,
   errorCorrectionLevel: ErrorCorrectionLevelOrNone,
   mask: number
@@ -54,7 +56,7 @@ export function applyMaskAndMetadata(
 }
 
 export function applyMask(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version,
   mask: number
 ): void {
@@ -62,8 +64,8 @@ export function applyMask(
   const maskFunction = isMicroQRVersion(version) ? MICRO_QR_MASKS[mask] : QR_MASKS[mask];
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const value = mat[y * width + x];
-      mat[y * width + x] = (value & -2) ? value : value ^ Number(maskFunction(y, x));
+      const value = mat.getExtAt(x, y);
+      mat.setExtAt(x, y, (value & NON_DATA_MASK) ? value : value ^ Number(maskFunction(y, x)));
     }
   }
 }
@@ -72,7 +74,7 @@ export function applyMask(
  * The larger the value, the better the mask.
  */
 export function evaluateMask(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version
 ): number {
   if (isMicroQRVersion(version)) {
@@ -83,7 +85,7 @@ export function evaluateMask(
 }
 
 export function evaluateMaskDetail(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version
 ): number[] {
   if (isMicroQRVersion(version)) {
@@ -100,7 +102,7 @@ export function evaluateMaskDetail(
 }
 
 function evaluateQRMask(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version
 ): number {
   const penaltyA = evaluateSegmentPenalty(mat, version);
@@ -113,7 +115,7 @@ function evaluateQRMask(
 }
 
 function evaluateSegmentPenalty(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version
 ): number {
   const N1 = 3;
@@ -125,7 +127,7 @@ function evaluateSegmentPenalty(
     let count = 0;
     let lastValue = -1;
     for (let x = 0; x < width; x++) {
-      const value = mat[y * width + x] & 1;
+      const value = mat.getAt(x, y);
       if (value === lastValue) {
         count++;
       } else {
@@ -140,7 +142,7 @@ function evaluateSegmentPenalty(
     let count = 0;
     let lastValue = -1;
     for (let y = 0; y < height; y++) {
-      const value = mat[y * width + x] & 1;
+      const value = mat.getAt(x, y);
       if (value === lastValue) {
         count++;
       } else {
@@ -163,7 +165,7 @@ function evaluateSegmentPenalty(
 }
 
 function evaluate2x2BlockPenalty(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version
 ): number {
   const N2 = 3;
@@ -173,11 +175,11 @@ function evaluate2x2BlockPenalty(
   let num2x2Blocks = 0;
   for (let y = 0; y < height - 1; y++) {
     for (let x = 0; x < width - 1; x++) {
-      const value = mat[y * width + x] & 1;
+      const value = mat.getAt(x, y);
       if (
-        value === (mat[y * width + x + 1] & 1) &&
-        value === (mat[(y + 1) * width + x] & 1) &&
-        value === (mat[(y + 1) * width + x + 1] & 1)
+        value === mat.getAt(x + 1, y) &&
+        value === mat.getAt(x, y + 1) &&
+        value === mat.getAt(x + 1, y + 1)
       ) {
         num2x2Blocks++;
       }
@@ -193,7 +195,7 @@ function evaluate2x2BlockPenalty(
 }
 
 function evaluatePseudoFinderPenalty(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version
 ): number {
   const N3 = 40;
@@ -212,9 +214,9 @@ function evaluatePseudoFinderPenalty(
     let rl1 = 10000;
     let rl0 = 10000;
     // the value of rl6, rl4, rl2, rl0 segments
-    let lastValue = 0;
+    let lastValue: Bit = 0;
     for (let x = 0; x <= width + 1; x++) {
-      const current = x < width ? mat[y * width + x] & 1 : lastValue ^ 1;
+      const current: Bit = x < width ? mat.getAt(x, y) : (lastValue ^ 1) as Bit;
       if (current !== lastValue) {
         // Check if rl5:rl4:rl3:rl2:rl1 is 1:1:3:1:1 and
         // either rl6 or rl0 is at least 4 times rl1
@@ -250,9 +252,9 @@ function evaluatePseudoFinderPenalty(
     let rl1 = 10000;
     let rl0 = 10000;
     // the value of rl6, rl4, rl2, rl0 segments
-    let lastValue = 0;
+    let lastValue: Bit = 0;
     for (let y = 0; y <= height + 1; y++) {
-      const current = y < height ? mat[y * width + x] & 1 : lastValue ^ 1;
+      const current: Bit = y < height ? mat.getAt(x, y) : (lastValue ^ 1) as Bit;
       if (current !== lastValue) {
         // Check if rl5:rl4:rl3:rl2:rl1 is 1:1:3:1:1 and
         // either rl6 or rl0 is at least 4 times rl1
@@ -283,7 +285,7 @@ function evaluatePseudoFinderPenalty(
 }
 
 function evaluateQRNonUniformityPenalty(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version
 ): number {
   const N4 = 10;
@@ -292,7 +294,7 @@ function evaluateQRNonUniformityPenalty(
   let bitCount = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const value = mat[y * width + x] & 1;
+      const value = mat.getAt(x, y);
       bitCount += value;
     }
   }
@@ -302,7 +304,7 @@ function evaluateQRNonUniformityPenalty(
 }
 
 function evaluateMicroQRMask(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version
 ): number {
   const { width, height } = SPECS[version];
@@ -310,13 +312,13 @@ function evaluateMicroQRMask(
   let vCount = 0;
   // Starting from 1 to skip the timing pattern
   for (let y = 1; y < height; y++) {
-    const value = mat[y * width + (width - 1)] & 1;
+    const value = mat.getAt(width - 1, y);
     vCount += value;
   }
   let hCount = 0;
   // Starting from 1 to skip the timing pattern
   for (let x = 1; x < width; x++) {
-    const value = mat[(height - 1) * width + x] & 1;
+    const value = mat.getAt(x, height - 1);
     hCount += value;
   }
 

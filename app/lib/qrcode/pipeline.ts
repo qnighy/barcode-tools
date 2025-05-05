@@ -1,4 +1,5 @@
 import { Bit } from "./bit";
+import { BitExtMatrix } from "./bit-ext-matrix";
 import { encodeErrorCorrection } from "./ecc";
 import { fitBytes } from "./fitting";
 import { fillFunctionPatterns, pourDataBits } from "./layout";
@@ -26,15 +27,13 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}
   const bitsWithEcc = encodeErrorCorrection(bodyBits, version, errorCorrectionLevel);
 
   const { width, height } = SPECS[version];
-  const mat = new Uint8Array(width * height);
+  const mat = new BitExtMatrix(width, height);
   fillFunctionPatterns(mat, version);
   pourDataBits(mat, version, bitsWithEcc);
   applyAutoMaskAndMetadata(mat, version, errorCorrectionLevel);
 
   const result: Bit[][] = Array.from({ length: height }, (_, y) =>
-    Array.from({ length: width }, (_, x) =>
-      (mat[y * width + x] & 1) as Bit
-    )
+    Array.from({ length: width }, (_, x) => mat.getAt(x, y))
   );
   return result;
 }

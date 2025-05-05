@@ -2,14 +2,15 @@ import { expect, test } from "vitest";
 import { fillFunctionPatterns } from "./layout";
 import { applyAutoMaskAndMetadata, applyMask, evaluateMaskDetail } from "./mask";
 import { SPECS, Version } from "./specs";
+import { BitExtMatrix } from "./bit-ext-matrix";
 
 function renderMaskPattern(version: Version, mask: number): string {
   const { width, height } = SPECS[version];
-  const mat = new Uint8Array(width * height);
+  const mat = new BitExtMatrix(width, height);
   fillFunctionPatterns(mat, version);
   applyMask(mat, version, mask);
   const mat2 = Array.from({ length: height }, (_, y) => Array.from({ length: width }, (_, x): string => {
-    const byte = mat[y * width + x];
+    const byte = mat.getExtAt(x, y);
     return byte & 1 ? "\u2588" : "\u2592";
   }));
   return mat2.map((row) => row.join("") + "\n").join("");
@@ -312,7 +313,7 @@ test("mask pattern 11 for version M4", () => {
 });
 
 test("applyAutoMaskAndMetadata as in Annex I", () => {
-  const mat = new Uint8Array([
+  const mat = new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 1, 0, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 1, 1, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 0, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -336,7 +337,7 @@ test("applyAutoMaskAndMetadata as in Annex I", () => {
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0,
   ]);
   applyAutoMaskAndMetadata(mat, 1, "M");
-  expect(mat).toEqual(new Uint8Array([
+  expect(mat).toEqual(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 0, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 1, 1, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 0, 0, 0, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -362,7 +363,7 @@ test("applyAutoMaskAndMetadata as in Annex I", () => {
 });
 
 test("applyAutoMaskAndMetadata for Micro QR as in Annex I", () => {
-  const mat = new Uint8Array([
+  const mat = new BitExtMatrix(13, [
     3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 0, 0,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 0, 1, 1,
@@ -378,7 +379,7 @@ test("applyAutoMaskAndMetadata for Micro QR as in Annex I", () => {
     3, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0,
   ]);
   applyAutoMaskAndMetadata(mat, "M2", "L");
-  expect(mat).toEqual(new Uint8Array([
+  expect(mat).toEqual(new BitExtMatrix(13, [
     3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 5, 1, 1, 0, 1,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 1, 0, 1,
@@ -396,7 +397,7 @@ test("applyAutoMaskAndMetadata for Micro QR as in Annex I", () => {
 });
 
 test("QR mask evaluation (good - checker pattern)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 5, 0, 1, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 0, 1, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -424,7 +425,7 @@ test("QR mask evaluation (good - checker pattern)", () => {
 });
 
 test("QR mask evaluation (bad - vertical stripes)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 5, 0, 1, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 5, 0, 1, 0, 1, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -451,7 +452,7 @@ test("QR mask evaluation (bad - vertical stripes)", () => {
 });
 
 test("QR mask evaluation (bad - horizontal stripes)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 5, 1, 1, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 0, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 1, 1, 1, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -478,7 +479,7 @@ test("QR mask evaluation (bad - horizontal stripes)", () => {
 });
 
 test("QR mask evaluation (bad - 3x3 blocks)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 5, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 5, 0, 0, 0, 1, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 0, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -505,7 +506,7 @@ test("QR mask evaluation (bad - 3x3 blocks)", () => {
 });
 
 test("QR mask evaluation (bad - 2x2 blocks)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 5, 0, 0, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 0, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 1, 0, 0, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -532,7 +533,7 @@ test("QR mask evaluation (bad - 2x2 blocks)", () => {
 });
 
 test("QR mask evaluation (bad - 2x2 dark blocks)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 5, 0, 1, 1, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 1, 0, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -559,7 +560,7 @@ test("QR mask evaluation (bad - 2x2 dark blocks)", () => {
 });
 
 test("QR mask evaluation (bad - 2x2 light blocks)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 5, 1, 1, 1, 0, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 0, 0, 1, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 1, 0, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -586,7 +587,7 @@ test("QR mask evaluation (bad - 2x2 light blocks)", () => {
 });
 
 test("QR mask evaluation (bad - pseudo finders)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 5, 0, 1, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 0, 1, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 0, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -613,7 +614,7 @@ test("QR mask evaluation (bad - pseudo finders)", () => {
 });
 
 test("QR mask evaluation (bad - too many 0s)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 4, 0, 0, 1, 0, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 5, 0, 0, 0, 0, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 4, 0, 1, 0, 0, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -640,7 +641,7 @@ test("QR mask evaluation (bad - too many 0s)", () => {
 });
 
 test("QR mask evaluation (bad - too many 1s)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(21, [
     3, 3, 3, 3, 3, 3, 3, 2, 5, 1, 1, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 1, 1, 2, 3, 2, 2, 2, 2, 2, 3,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 1, 0, 1, 1, 2, 3, 2, 3, 3, 3, 2, 3,
@@ -667,7 +668,7 @@ test("QR mask evaluation (bad - too many 1s)", () => {
 });
 
 test("Micro QR mask evaluation (good - has 1s in the edges)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(13, [
     3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 1, 1,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 0, 1,
@@ -687,7 +688,7 @@ test("Micro QR mask evaluation (good - has 1s in the edges)", () => {
 });
 
 test("Micro QR mask evaluation (good - has 1s evenly in the edges)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(13, [
     3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 1, 0,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 0, 1,
@@ -707,7 +708,7 @@ test("Micro QR mask evaluation (good - has 1s evenly in the edges)", () => {
 });
 
 test("Micro QR mask evaluation (not too bad - has 1s in the left edge)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(13, [
     3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 1, 1,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 0, 1,
@@ -727,7 +728,7 @@ test("Micro QR mask evaluation (not too bad - has 1s in the left edge)", () => {
 });
 
 test("Micro QR mask evaluation (not too bad - has 1s in the bottom edge)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(13, [
     3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 1, 0,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 0, 0,
@@ -747,7 +748,7 @@ test("Micro QR mask evaluation (not too bad - has 1s in the bottom edge)", () =>
 });
 
 test("Micro QR mask evaluation (bad - no 1s in the edges)", () => {
-  const scores = evaluateMaskDetail(new Uint8Array([
+  const scores = evaluateMaskDetail(new BitExtMatrix(13, [
     3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3,
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 1, 0,
     3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 0, 0,

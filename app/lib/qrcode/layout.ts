@@ -1,67 +1,65 @@
 import { encodeBCH5, encodeBCH6 } from "./bch";
+import { BitExtMatrix, FUNCTION_PATTERN_FLAG, METADATA_AREA_FLAG, NON_DATA_MASK } from "./bit-ext-matrix";
 import { Bits } from "./bit-writer";
 import { ErrorCorrectionLevelOrNone, isMicroQRVersion, MicroQRVersion, QRVersion, SPECS, Version } from "./specs";
 
-export const FUNCTION_PATTERN = 2;
-export const METADATA_AREA = 4;
-
 export function fillFunctionPatterns(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version,
 ): void {
   const spec = SPECS[version];
   const { width, height } = spec;
-  if (mat.length !== width * height) {
-    throw new RangeError(`Invalid matrix size: ${mat.length}, expected ${width * height}`);
+  if (mat.width !== width || mat.height !== height) {
+    throw new RangeError(`Invalid matrix size: ${mat.width}x${mat.height}, expected ${width}x${height}`);
   }
   if (isMicroQRVersion(version)) {
     // The finder pattern + separator
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < 8; x++) {
         const parity = finderParity(x, y);
-        mat[y * width + x] = FUNCTION_PATTERN + parity;
+        mat.setExtAt(x, y, FUNCTION_PATTERN_FLAG + parity);
       }
     }
     // Timing patterns
     for (let x = 8; x < width; x++) {
-      mat[0 * width + x] = FUNCTION_PATTERN + ((x & 1) ^ 1);
+      mat.setExtAt(x, 0, FUNCTION_PATTERN_FLAG | ((x & 1) ^ 1));
     }
     for (let y = 8; y < height; y++) {
-      mat[y * width + 0] = FUNCTION_PATTERN + ((y & 1) ^ 1);
+      mat.setExtAt(0, y, FUNCTION_PATTERN_FLAG | ((y & 1) ^ 1));
     }
     // Format information area
     for (let x = 1; x < 9; x++) {
-      mat[8 * width + x] = METADATA_AREA;
+      mat.setExtAt(x, 8, METADATA_AREA_FLAG);
     }
     for (let y = 1; y < 9; y++) {
-      mat[y * width + 8] = METADATA_AREA;
+      mat.setExtAt(8, y, METADATA_AREA_FLAG);
     }
   } else {
     // The finder pattern + separator
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < 8; x++) {
         const parity = finderParity(x, y);
-        mat[y * width + x] = FUNCTION_PATTERN + parity;
+        mat.setExtAt(x, y, FUNCTION_PATTERN_FLAG | parity);
       }
     }
     for (let y = 0; y < 8; y++) {
       for (let x = width - 8; x < width; x++) {
         const parity = finderParity(x - (width - 7), y);
-        mat[y * width + x] = FUNCTION_PATTERN + parity;
+        mat.setExtAt(x, y, FUNCTION_PATTERN_FLAG | parity);
       }
     }
     for (let y = height - 8; y < height; y++) {
       for (let x = 0; x < 8; x++) {
         const parity = finderParity(x, y - (height - 7));
-        mat[y * width + x] = FUNCTION_PATTERN + parity;
+        mat.setExtAt(x, y, FUNCTION_PATTERN_FLAG | parity);
       }
     }
     // Timing patterns
     for (let x = 8; x < width - 8; x++) {
-      mat[6 * width + x] = FUNCTION_PATTERN + ((x & 1) ^ 1);
+      mat.setExtAt(x, 6, FUNCTION_PATTERN_FLAG | ((x & 1) ^ 1));
     }
     for (let y = 8; y < height - 8; y++) {
-      mat[y * width + 6] = FUNCTION_PATTERN + ((y & 1) ^ 1);
+      mat.setExtAt(6, y, FUNCTION_PATTERN_FLAG | ((y & 1) ^ 1));
     }
     // Alignment patterns
     const lastAlignmentPatternPos = spec.alignmentPatternPositions[spec.alignmentPatternPositions.length - 1];
@@ -77,7 +75,7 @@ export function fillFunctionPatterns(
         for (let y = y0 - 2; y <= y0 + 2; y++) {
           for (let x = x0 - 2; x <= x0 + 2; x++) {
             const parity = alignmentParity(x - x0, y - y0);
-            mat[y * width + x] = FUNCTION_PATTERN + parity;
+            mat.setExtAt(x, y, FUNCTION_PATTERN_FLAG | parity);
           }
         }
       }
@@ -85,30 +83,30 @@ export function fillFunctionPatterns(
     // Format information area
     for (let x = 0; x < 9; x++) {
       if (x !== 6) {
-        mat[8 * width + x] = METADATA_AREA;
+        mat.setExtAt(x, 8, METADATA_AREA_FLAG);
       }
     }
     for (let x = width - 8; x < width; x++) {
-      mat[8 * width + x] = METADATA_AREA;
+      mat.setExtAt(x, 8, METADATA_AREA_FLAG);
     }
     for (let y = 0; y < 9; y++) {
       if (y !== 6) {
-        mat[y * width + 8] = METADATA_AREA;
+        mat.setExtAt(8, y, METADATA_AREA_FLAG);
       }
     }
     for (let y = height - 8; y < height; y++) {
-      mat[y * width + 8] = METADATA_AREA;
+      mat.setExtAt(8, y, METADATA_AREA_FLAG);
     }
     if (spec.versionInfoSize) {
       // Version information area
       for (let y = 0; y < 6; y++) {
         for (let x = width - 11; x < width - 8; x++) {
-          mat[y * width + x] = METADATA_AREA;
+          mat.setExtAt(x, y, METADATA_AREA_FLAG);
         }
       }
       for (let y = height - 11; y < height - 8; y++) {
         for (let x = 0; x < 6; x++) {
-          mat[y * width + x] = METADATA_AREA;
+          mat.setExtAt(x, y, METADATA_AREA_FLAG);
         }
       }
     }
@@ -131,25 +129,22 @@ function alignmentParity(x: number, y: number): number {
 }
 
 export function pourDataBits(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version,
   bits: Bits
 ): void {
-  const spec = SPECS[version];
-  const { width } = spec;
-
   let currentByte: number | null = null;
   let bitIndex = 0;
   for (const [x, y] of bitPositions(mat, version)) {
-    if (mat[y * width + x] & -2) {
+    if (mat.getExtAt(x, y) & NON_DATA_MASK) {
       continue;
     }
     if (bitIndex >= bits.bitLength) {
-      mat[y * width + x] = 0;
+      mat.setExtAt(x, y, 0);
       continue;
     }
     currentByte ??= bits.bytes[bitIndex >> 3];
-    mat[y * width + x] = (currentByte >> (7 - (bitIndex & 7))) & 1;
+    mat.setExtAt(x, y, (currentByte >> (7 - (bitIndex & 7))) & 1);
     bitIndex++;
     if ((bitIndex & 7) === 0) {
       currentByte = null;
@@ -157,10 +152,9 @@ export function pourDataBits(
   }
 }
 
-export function* bitPositions(mat: Uint8Array, version: Version): IterableIterator<[number, number]> {
-  const { width } = SPECS[version];
+export function* bitPositions(mat: BitExtMatrix, version: Version): IterableIterator<[number, number]> {
   for (const [x, y] of rawBitPositions(version)) {
-    if (mat[y * width + x] & -2) {
+    if (mat.getExtAt(x, y) & NON_DATA_MASK) {
       continue;
     }
     yield [x, y];
@@ -214,7 +208,7 @@ const MICROQR_SYMBOL_NUMBERS: Record<MicroQRVersion, Partial<Record<ErrorCorrect
 };
 
 export function pourMetadataBits(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: Version,
   errorCorrectionLevel: ErrorCorrectionLevelOrNone,
   mask: number
@@ -265,7 +259,7 @@ const QR_FORMAT_INFO_POSITIONS = [
 const QR_FORMAT_INFO_MASK = 0b101010000010010;
 
 function pourQRMetadataBits(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: QRVersion,
   errorCorrectionLevel: ErrorCorrectionLevelOrNone,
   mask: number
@@ -282,10 +276,10 @@ function pourQRMetadataBits(
     const x = relX < 0 ? width + relX : relX;
     const y = relY < 0 ? height + relY : relY;
     const bit = (formatInfoBits >> bitPos) & 1;
-    mat[y * width + x] = METADATA_AREA + bit;
+    mat.setExtAt(x, y, METADATA_AREA_FLAG | bit);
   }
   // Always set to 1
-  mat[(height - 8) * width + 8] = METADATA_AREA + 1;
+  mat.setExtAt(8, (height - 8), METADATA_AREA_FLAG | 1);
 
   if (spec.versionInfoSize) {
     const versionInfoBits = encodeBCH6(version);
@@ -294,14 +288,14 @@ function pourQRMetadataBits(
       const bit = (versionInfoBits >> i) & 1;
       const x = width - 11 + i % 3;
       const y = Math.floor(i / 3);
-      mat[y * width + x] = METADATA_AREA + bit;
+      mat.setExtAt(x, y, METADATA_AREA_FLAG | bit);
     }
     // Bottom left
     for (let i = 0; i < 18; i++) {
       const bit = (versionInfoBits >> i) & 1;
       const x = Math.floor(i / 3);
       const y = height - 11 + i % 3;
-      mat[y * width + x] = METADATA_AREA + bit;
+      mat.setExtAt(x, y, METADATA_AREA_FLAG | bit);
     }
   }
 }
@@ -309,13 +303,11 @@ function pourQRMetadataBits(
 const MICRO_QR_FORMAT_INFO_MASK = 0b100010001000101;
 
 function pourMicroQRMetadataBits(
-  mat: Uint8Array,
+  mat: BitExtMatrix,
   version: MicroQRVersion,
   errorCorrectionLevel: ErrorCorrectionLevelOrNone,
   mask: number
 ): void {
-  const spec = SPECS[version];
-  const { width } = spec;
   const symbolNumber = MICROQR_SYMBOL_NUMBERS[version][errorCorrectionLevel];
   if (symbolNumber == null) {
     throw new RangeError(`Invalid error correction level ${errorCorrectionLevel} for version ${version}`);
@@ -325,12 +317,12 @@ function pourMicroQRMetadataBits(
     const bit = (formatInfoBits >> i) & 1;
     const x = 8;
     const y = i + 1;
-    mat[y * width + x] = METADATA_AREA + bit;
+    mat.setExtAt(x, y, METADATA_AREA_FLAG | bit);
   }
   for (let i = 8; i < 15; i++) {
     const bit = (formatInfoBits >> i) & 1;
     const x = 15 - i;
     const y = 8;
-    mat[y * width + x] = METADATA_AREA + bit;
+    mat.setExtAt(x, y, METADATA_AREA_FLAG | bit);
   }
 }

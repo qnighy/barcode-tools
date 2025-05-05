@@ -27,7 +27,7 @@ export default function Home(): ReactElement | null {
           }}
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        {svgURL && <img src={svgURL} alt="Generated QR Code" />}
+        {svgURL && <img className="max-h-lvh max-w-lvw" src={svgURL} alt="Generated QR Code" />}
       </main>
     </div>
   );

@@ -64,15 +64,6 @@ test("1-M one-block example", () => {
 });
 
 test("3-H two-blocks example", () => {
-  // const data = new TextEncoder().encode("Hello, world! 0123456789 ABC");
-  // const { bits: bodyBits, version, errorCorrectionLevel } = fitBytes(data, {
-  //   minErrorCorrectionLevel: "H",
-  //   allowMicroQR: false,
-  // });
-  // expect(version).toEqual(3);
-  // console.log(bodyBits);
-  // console.log([...bodyBits.bytes].map((b) => `0b${b.toString(2).padStart(8, "0")}`).join(", "));
-
   // Hello, world! 0123456789 ABC
   const bits: Bits = {
     bitLength: 208,

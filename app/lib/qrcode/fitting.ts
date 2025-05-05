@@ -2,9 +2,10 @@ import { Bits, BitWriter } from "./bit-writer";
 import { addFiller, BinaryParts, BitOverflowError, compressBinaryParts, UnsupportedContentError } from "./compression";
 import { CODING_SPECS, CodingVersion, ErrorCorrectionLevelOrNone, SPECS, Version } from "./specs";
 
+export type QRSymbolType = "QR" | "MicroQR";
 export type FitBytesOptions = {
   minErrorCorrectionLevel: ErrorCorrectionLevelOrNone;
-  allowMicroQR?: boolean;
+  symbolType: QRSymbolType;
 };
 
 export type FitBytesResult = {
@@ -31,11 +32,19 @@ const LEVEL_MAP: Record<ErrorCorrectionLevelOrNone, ErrorCorrectionLevelOrNone[]
   H: ["H"],
 };
 
+export function getMaxBitLength(symbolType: QRSymbolType, minErrorCorrectionLevel: ErrorCorrectionLevelOrNone): number {
+  const version: Version = symbolType === "MicroQR" ? "M4" : 40;
+  const spec = SPECS[version];
+  const level = LEVEL_MAP[minErrorCorrectionLevel].find((level) => level in spec.errorCorrectionSpecs)!;
+  const errorCorrectionSpec = spec.errorCorrectionSpecs[level]!;
+  return errorCorrectionSpec.dataBits;
+}
+
 export function fitBytes(parts: BinaryParts, options: FitBytesOptions): FitBytesResult {
-  const { minErrorCorrectionLevel, allowMicroQR = false } = options;
+  const { minErrorCorrectionLevel, symbolType } = options;
   const codingVersions: CodingVersion[] =
-    allowMicroQR
-      ? ["M1", "M2", "M3", "M4", 9, 26, 40]
+    symbolType === "MicroQR"
+      ? ["M1", "M2", "M3", "M4"]
       : [9, 26, 40];
   let lastError: BitOverflowError | UnsupportedContentError | undefined;
   for (const codingVersion of codingVersions) {

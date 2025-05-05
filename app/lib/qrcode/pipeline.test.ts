@@ -4,7 +4,7 @@ import { BitExtMatrix } from "./bit-ext-matrix";
 
 test("encodeToMatrix example on Annex I QR code", () => {
   const result = encodeToMatrix("01234567", {
-    allowMicroQR: false,
+    symbolType: "QR",
     minErrorCorrectionLevel: "M",
   });
   expect(result).toEqual({

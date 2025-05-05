@@ -1,14 +1,14 @@
 import { BitExtMatrix } from "./bit-ext-matrix";
 import { BinaryParts } from "./compression";
 import { encodeErrorCorrection } from "./ecc";
-import { fitBytes } from "./fitting";
+import { fitBytes, QRSymbolType } from "./fitting";
 import { fillFunctionPatterns, pourDataBits } from "./layout";
 import { applyAutoMaskAndMetadata } from "./mask";
 import { ErrorCorrectionLevelOrNone, SPECS, Version } from "./specs";
 import { generateSVGFromMatrix } from "./svg";
 
 export type EncodeToMatrixOptions = {
-  allowMicroQR?: boolean;
+  symbolType: QRSymbolType;
   minErrorCorrectionLevel?: ErrorCorrectionLevelOrNone;
 };
 
@@ -19,9 +19,9 @@ export type EncodeToMatrixResult = {
   matrix: BitExtMatrix;
 };
 
-export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}): EncodeToMatrixResult {
+export function encodeToMatrix(text: string, options: EncodeToMatrixOptions): EncodeToMatrixResult {
   const {
-    allowMicroQR = false,
+    symbolType,
     minErrorCorrectionLevel = "NONE",
   } = options;
   const data: BinaryParts = [{
@@ -30,8 +30,8 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}
     bytes: new TextEncoder().encode(text),
   }];
   const { bits: bodyBits, version, errorCorrectionLevel, bodyBitLength } = fitBytes(data, {
+    symbolType,
     minErrorCorrectionLevel,
-    allowMicroQR,
   });
   const bitsWithEcc = encodeErrorCorrection(bodyBits, version, errorCorrectionLevel);
 
@@ -50,7 +50,7 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions = {}
 }
 
 export type EncodeToSVGOptions = {
-  allowMicroQR?: boolean;
+  symbolType: QRSymbolType;
   minErrorCorrectionLevel?: ErrorCorrectionLevelOrNone;
 };
 
@@ -62,14 +62,14 @@ export type EncodeToSVGResult = {
   svg: string;
 };
 
-export function encodeToSVG(text: string, options: EncodeToSVGOptions = {}): EncodeToSVGResult {
+export function encodeToSVG(text: string, options: EncodeToSVGOptions): EncodeToSVGResult {
   const {
-    allowMicroQR = false,
+    symbolType,
     minErrorCorrectionLevel = "NONE",
   } = options;
 
   const { version, errorCorrectionLevel, bodyBitLength, matrix } = encodeToMatrix(text, {
-    allowMicroQR,
+    symbolType,
     minErrorCorrectionLevel,
   });
   const svg = generateSVGFromMatrix(version, matrix, {

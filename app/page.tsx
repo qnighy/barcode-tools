@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactElement, useEffect, useMemo, useState } from "react";
-import { BitOverflowError, UnsupportedContentError, encodeToQRSVG, ErrorCorrectionLevelOrNone } from "./lib/qrcode";
+import { BitOverflowError, UnsupportedContentError, encodeToQRSVG, ErrorCorrectionLevelOrNone, QRSymbolType, getMaxBitLength } from "./lib/qrcode";
 
 type QRResult = QRSuccessResult | QRBitOverflowResult | QRUnsupportedContentResult;
 type QRSuccessResult = {
@@ -24,19 +24,23 @@ type QRUnsupportedContentResult = {
   svg: null;
 };
 
-type SymbolType = "QR" | "MicroQR";
-
 export default function Home(): ReactElement | null {
-  const [symbolType, setSymbolType] = useState<SymbolType>("QR");
+  const [symbolType, setSymbolType] = useState<QRSymbolType>("QR");
   const [minErrorCorrectionLevel, setMinErrorCorrectionLevel] = useState<ErrorCorrectionLevelOrNone>("NONE");
+  const modifiedMinErrorCorrectionLevel =
+    symbolType === "QR" && minErrorCorrectionLevel === "L"
+      ? "NONE"
+      : symbolType === "MicroQR" && minErrorCorrectionLevel === "H"
+      ? "Q"
+      : minErrorCorrectionLevel;
 
   const [text, setText] = useState<string>("");
-  const maxBitLength = 23648; // Version 40, L
+  const maxBitLength = useMemo((): number => getMaxBitLength(symbolType, modifiedMinErrorCorrectionLevel), [symbolType, modifiedMinErrorCorrectionLevel]);
   const result = useMemo<QRResult>((): QRResult => {
     try {
       const { bodyBitLength, svg } = encodeToQRSVG(text, {
-        allowMicroQR: symbolType === "MicroQR",
-        minErrorCorrectionLevel,
+        symbolType,
+        minErrorCorrectionLevel: modifiedMinErrorCorrectionLevel,
       });
       return {
         type: "success",
@@ -63,7 +67,7 @@ export default function Home(): ReactElement | null {
       }
       throw e;
     }
-  }, [text, symbolType, minErrorCorrectionLevel]);
+  }, [text, symbolType, modifiedMinErrorCorrectionLevel]);
 
   const { bodyBitLength, svg } = result;
 
@@ -96,7 +100,7 @@ export default function Home(): ReactElement | null {
             className="w-40 p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={symbolType}
             onChange={(e) => {
-              setSymbolType(e.currentTarget.value as SymbolType);
+              setSymbolType(e.currentTarget.value as QRSymbolType);
             }}
           >
             <option value="QR">QR Code</option>
@@ -104,11 +108,7 @@ export default function Home(): ReactElement | null {
           </select>
           <select
             className="w-50 p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={
-              symbolType === "QR" && minErrorCorrectionLevel === "L"
-              ? "NONE"
-              : minErrorCorrectionLevel
-            }
+            value={modifiedMinErrorCorrectionLevel}
             onChange={(e) => {
               setMinErrorCorrectionLevel(e.currentTarget.value as ErrorCorrectionLevelOrNone);
             }}
@@ -126,7 +126,10 @@ export default function Home(): ReactElement | null {
             }
             <option value="M">Error Correction: M</option>
             <option value="Q">Error Correction: Q</option>
-            <option value="H">Error Correction: H</option>
+            {
+              symbolType === "QR" &&
+                <option value="H">Error Correction: H</option>
+            }
           </select>
         </div>
         <textarea

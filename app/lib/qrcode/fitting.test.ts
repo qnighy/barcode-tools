@@ -9,7 +9,7 @@ test("1-H digit example", () => {
       eciDesignator: null,
       bytes: new TextEncoder().encode("01234567"),
     }],
-    { minErrorCorrectionLevel: "H" },
+    { minErrorCorrectionLevel: "H", symbolType: "QR" },
   );
   expect(result.version).toEqual(1);
   expect(result.errorCorrectionLevel).toEqual("H");
@@ -49,7 +49,7 @@ test("M3-M digit example", () => {
       eciDesignator: null,
       bytes: new TextEncoder().encode("0123456789012345"),
     }],
-    { minErrorCorrectionLevel: "M", allowMicroQR: true },
+    { minErrorCorrectionLevel: "M", symbolType: "MicroQR" },
   );
   expect(result.version).toEqual("M3");
   expect(result.errorCorrectionLevel).toEqual("M");

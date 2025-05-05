@@ -1,4 +1,5 @@
 import { BitExtMatrix } from "./qrcode/bit-ext-matrix";
+import { QRSymbolType } from "./qrcode/fitting";
 import { encodeToMatrix, encodeToSVG } from "./qrcode/pipeline";
 import { ErrorCorrectionLevelOrNone, Version } from "./qrcode/specs";
 
@@ -6,9 +7,11 @@ export type { ErrorCorrectionLevelOrNone, Version } from "./qrcode/specs";
 export { BitExtMatrix, BIT_VALUE_FLAG, METADATA_AREA_FLAG, FUNCTION_PATTERN_FLAG, NON_DATA_MASK } from "./qrcode/bit-ext-matrix";
 export { BitOverflowError, UnsupportedContentError } from "./qrcode/compression";
 export type { BitOverflowErrorOptions, UnsupportedContentType, UnsupportedContentErrorOptions } from "./qrcode/compression";
+export { getMaxBitLength } from "./qrcode/fitting";
+export type { QRSymbolType } from "./qrcode/fitting";
 
 export type EncodeToQROptions = {
-  allowMicroQR?: boolean;
+  symbolType: QRSymbolType;
   minErrorCorrectionLevel?: ErrorCorrectionLevelOrNone;
 };
 
@@ -19,7 +22,7 @@ export type EncodeToQRMatrixResult = {
   matrix: BitExtMatrix;
 };
 
-export function encodeToQRMatrix(text: string, options: EncodeToQROptions = {}): EncodeToQRMatrixResult {
+export function encodeToQRMatrix(text: string, options: EncodeToQROptions): EncodeToQRMatrixResult {
   return encodeToMatrix(text, options);
 }
 
@@ -31,6 +34,6 @@ export type EncodeToQRSVGResult = {
   svg: string;
 };
 
-export function encodeToQRSVG(text: string, options: EncodeToQROptions = {}): EncodeToQRSVGResult {
+export function encodeToQRSVG(text: string, options: EncodeToQROptions): EncodeToQRSVGResult {
   return encodeToSVG(text, options);
 }

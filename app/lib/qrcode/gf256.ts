@@ -43,6 +43,7 @@ export const ZERO: GF256 = 0 as GF256;
 export function add(x: GF256, y: GF256): GF256 {
   return (x ^ y) as GF256;
 }
+export { add as sub };
 
 /**
  * You don't need to use this. Simply write `x` to get the negation.
@@ -97,6 +98,13 @@ export function negExponent(x: LogGF256): LogGF256 {
     return LOG_ZERO;
   }
   return ((255 - x) % 255) as LogGF256;
+}
+
+export function mulExponent(x: LogGF256, y: number): LogGF256 {
+  if (x === LOG_ZERO) {
+    return LOG_ZERO;
+  }
+  return ((x * y) % 255) as LogGF256;
 }
 
 /**

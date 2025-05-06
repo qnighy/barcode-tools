@@ -1,6 +1,7 @@
-import { expect, test } from "vitest";
+import { expect } from "vitest";
+import { test } from "@fast-check/vitest";
 import { LOG_ZERO } from "./gf256";
-import { POLYNOMIALS, RSPolynomial } from "./poly";
+import { correctErrors, POLYNOMIALS, RSPolynomial } from "./poly";
 
 function stringifyPolynomial(poly: RSPolynomial): string {
   const degree = poly.nonLeadingLogCoefficients.length;
@@ -167,4 +168,27 @@ test("it works as illustrated in Annex I, I.3", () => {
     0b10101110,
     0b00110000,
   ]));
+});
+
+test("Correction example (small)", () => {
+  const numEccBytes = 5;
+  const original = Uint8Array.from([
+    0b01000000,
+    0b00011000,
+    0b10101100,
+    0b11000011,
+    0b00000000,
+    0b10000110,
+    0b00001101,
+    0b00100010,
+    0b10101110,
+    0b00110000,
+  ]);
+
+  const buf = original.slice();
+  buf[6] ^= 0b00000101;
+  buf[9] ^= 0b00001001;
+
+  correctErrors(numEccBytes, buf, { p: 0 });
+  expect(buf).toEqual(original);
 });

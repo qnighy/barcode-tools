@@ -1,5 +1,7 @@
-import { expect, test } from "vitest";
-import { encodeBCH5, encodeBCH6 } from "./bch";
+import { expect } from "vitest";
+import { test } from "@fast-check/vitest";
+import { decodeBCH5, decodeBCH6, encodeBCH5, encodeBCH6 } from "./bch";
+import { fc } from "@fast-check/vitest";
 
 test("it matches Table C.1", () => {
   const qrMask = 0b101010000010010;
@@ -117,4 +119,77 @@ test("it matches Table D.1", () => {
     [40, 0b101000110001101001, 0x28C69],
   ];
   expect(actual).toEqual(expected);
+});
+
+function natOfBits(length: number, maxPopcount: number): fc.Arbitrary<number> {
+  const counts: number[][] = Array.from({ length: length - maxPopcount + 1 }, () =>
+    Array.from({ length: maxPopcount + 1 }, () => 0)
+  );
+  for (let i = 0; i <= length - maxPopcount; i++) {
+    for (let j = 0; j <= maxPopcount; j++) {
+      if (j === 0) {
+        counts[i][j] = 1;
+      } else if (i === 0) {
+        counts[i][j] = 1 << j;
+      } else {
+        counts[i][j] = counts[i - 1][j] + counts[i][j - 1];
+      }
+    }
+  }
+  return fc.nat({ max: counts[length - maxPopcount][maxPopcount] - 1 }).map((num) => {
+    let result = 0;
+    let i = length - maxPopcount;
+    let j = maxPopcount;
+    while (j > 0) {
+      if (num >= counts[i][j - 1]) {
+        num -= counts[i][j - 1];
+        result |= 1 << (i + j - 1);
+        j--;
+      } else {
+        i--;
+        j = Math.min(i, j);
+      }
+    }
+    return result;
+  });
+}
+
+test.prop([fc.nat({ max: 31 }), natOfBits(15, 3)])("BCH5 correct 3 unknown bits", (value, errors) => {
+  const encoded = encodeBCH5(value);
+  expect(decodeBCH5(encoded ^ errors, 0)).toBe(value);
+});
+
+test.prop([fc.nat({ max: 31 }), natOfBits(15, 2), natOfBits(15, 2)])("BCH5 correct 2 unknown bits + 2 known bits", (value, errors, knownErrors) => {
+  const encoded = encodeBCH5(value);
+  expect(decodeBCH5(encoded ^ (errors | knownErrors), knownErrors)).toBe(value);
+});
+
+test.prop([fc.nat({ max: 31 }), natOfBits(15, 1), natOfBits(15, 4)])("BCH5 correct 1 unknown bits + 4 known bits", (value, errors, knownErrors) => {
+  const encoded = encodeBCH5(value);
+  expect(decodeBCH5(encoded ^ (errors | knownErrors), knownErrors)).toBe(value);
+});
+
+test.prop([fc.nat({ max: 31 }), natOfBits(15, 0), natOfBits(15, 6)])("BCH5 correct 0 unknown bits + 6 known bits", (value, errors, knownErrors) => {
+  const encoded = encodeBCH5(value);
+  expect(decodeBCH5(encoded ^ (errors | knownErrors), knownErrors)).toBe(value);
+});
+
+test.prop([fc.integer({ min: 7, max: 40 }), natOfBits(18, 3), natOfBits(18, 1)])("BCH6 correct 3 unknown bits + 1 known bits", (value, errors) => {
+  const encoded = encodeBCH6(value);
+  expect(decodeBCH6(encoded ^ errors, 0)).toBe(value);
+});
+
+test.prop([fc.integer({ min: 7, max: 40 }), natOfBits(18, 2), natOfBits(18, 3)])("BCH6 correct 2 unknown bits + 3 known bits", (value, errors) => {
+  const encoded = encodeBCH6(value);
+  expect(decodeBCH6(encoded ^ errors, 0)).toBe(value);
+});
+
+test.prop([fc.integer({ min: 7, max: 40 }), natOfBits(18, 1), natOfBits(18, 5)])("BCH6 correct 1 unknown bits + 5 known bits", (value, errors) => {
+  const encoded = encodeBCH6(value);
+  expect(decodeBCH6(encoded ^ errors, 0)).toBe(value);
+});
+
+test.prop([fc.integer({ min: 7, max: 40 }), natOfBits(18, 0), natOfBits(18, 7)])("BCH6 correct 0 unknown bits + 7 known bits", (value, errors) => {
+  const encoded = encodeBCH6(value);
+  expect(decodeBCH6(encoded ^ errors, 0)).toBe(value);
 });

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { addFiller, CodingParameters, compressBinaryParts } from "./compression";
+import { addFiller, CodingParameters, compressBinaryParts, decompressAsBinaryParts } from "./compression";
 import { Bits, BitWriter } from "./bit-writer";
 
 const M3Parameters: CodingParameters = {
@@ -425,4 +425,34 @@ test("addFiller, QR, 2.5-byte excess", () => {
       0b00010001,
     ]),
   } satisfies Bits);
+});
+
+test("digit decoding example on 1-H symbol", () => {
+  const result = decompressAsBinaryParts({
+    bitLength: 41,
+    bytes: new Uint8Array([
+      // mode  0001
+      // size      0000(001000)
+      0b00010000,
+      // ...   001000
+      // chunk       00(00001100)
+      0b00100000,
+      // ...   00001100
+      0b00001100,
+      // chunk 01010110(01)
+      0b01010110,
+      // ...   01
+      // chunk   100001(1)
+      0b01100001,
+      // ...   1
+      // pad    0000000
+      0b10000000,
+    ]),
+  }, V9Parameters);
+  expect(result).toEqual([
+    {
+      eciDesignator: null,
+      bytes: new TextEncoder().encode("01234567"),
+    }
+  ]);
 });

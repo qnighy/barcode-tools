@@ -1,4 +1,5 @@
-import { BitWriter } from "./bit-writer";
+import { BitReader } from "./bit-reader";
+import { Bits, BitWriter } from "./bit-writer";
 
 export type CodingParameters = {
   modeIndicatorBits: number;
@@ -62,6 +63,12 @@ export class UnsupportedContentError extends Error {
     );
     this.unsupportedContentType = unsupportedContentType;
     this.maxBitLength = maxBitLength;
+  }
+}
+
+export class FormatError extends Error {
+  static {
+    this.prototype.name = "FormatError";
   }
 }
 
@@ -502,4 +509,155 @@ export function addFiller(
   }
   // Add final padding bits
   writer.pushNumber(0, maxBits - writer.bitLength);
+}
+
+export function decompressAsBinaryParts(
+  bits: Bits,
+  params: CodingParameters
+): BinaryParts {
+  const hasLongTerminator = params.digitModeIndicator === 0;
+  const reader = new BitReader(bits);
+  const parts: BinaryPart[] = [];
+  let currentECI: number | null = null;
+  const byteWriter = new ByteWriter();
+  try {
+  loop:
+    while (true) {
+      if (reader.remainingBits < params.modeIndicatorBits) {
+        const lastPart = reader.readNumber(reader.remainingBits);
+        if (lastPart !== 0) {
+          throw new FormatError("Early end of input");
+        }
+        break;
+      }
+      const mode = reader.readNumber(params.modeIndicatorBits);
+      switch (mode) {
+        case 0: {
+          if (!hasLongTerminator) {
+            // Ordinary QR code.
+            break loop;
+          } else if (reader.remainingBits < params.digitModeCountBits) {
+            const lastPart = reader.readNumber(reader.remainingBits);
+            if (lastPart !== 0) {
+              throw new FormatError("Early end of input");
+            }
+            break loop;
+          } else {
+            // For Micro QR code, we need to check the length bits to determine
+            // if it is a digit mode or a terminator.
+            const length = reader.readNumber(params.digitModeCountBits);
+            if (length === 0) {
+              break loop;
+            }
+            readDigitChunk(reader, byteWriter, params, length);
+            break;
+          }
+        }
+        case params.digitModeIndicator: {
+          readDigitChunk(reader, byteWriter, params);
+          break;
+        }
+        case params.ECIModeIndicator: {
+          parts.push({
+            eciDesignator: currentECI,
+            bytes: byteWriter.currentCopy(),
+          });
+          byteWriter.clear();
+
+          let designator = reader.readNumber(8);
+          if ((designator & 0x80) === 0) {
+            // 0b0xxxxxxx (1 byte form)
+            // nothing to do
+          } else if ((designator & 0xC0) === 0x80) {
+            // 0b10xxxxxx 0bxxxxxxxx (2 byte form)
+            designator = ((designator & 0x3F) << 8) | reader.readNumber(8);
+          } else if ((designator & 0xE0) === 0xC0) {
+            // 0b110xxxxx 0bxxxxxxxx 0bxxxxxxxx (3 byte form)
+            designator = ((designator & 0x1F) << 16) | (reader.readNumber(8) << 8) | reader.readNumber(8);
+            if (designator >= 1000000) {
+              throw new FormatError("ECI designator too large");
+            }
+          } else {
+            throw new FormatError("Invalid ECI designator");
+          }
+          currentECI = designator;
+        }
+        default:
+          throw new FormatError(`Unknown mode: ${mode.toString(2).padStart(params.modeIndicatorBits, "0")}`);
+      }
+    }
+  } catch (e) {
+    if (e instanceof RangeError) {
+      throw new FormatError("Early end of input");
+    }
+    throw e;
+  }
+  if (byteWriter.len > 0 || currentECI != null) {
+    parts.push({
+      eciDesignator: currentECI,
+      bytes: byteWriter.currentCopy(),
+    });
+  }
+  return parts;
+}
+
+function readDigitChunk(
+  reader: BitReader,
+  byteWriter: ByteWriter,
+  params: CodingParameters,
+  length?: number
+): void {
+  length ??= reader.readNumber(params.digitModeCountBits);
+  byteWriter.reserve(byteWriter.buf.length + length);
+  for (let i = 0; i < length; i += 3) {
+    const size = length - i;
+    if (size <= 1) {
+      const value = reader.readNumber(4);
+      if (value >= 10) {
+        throw new FormatError("BCD out of bounds");
+      }
+      byteWriter.push(value + 0x30);
+    } else if (size <= 2) {
+      const value = reader.readNumber(7);
+      if (value >= 100) {
+        throw new FormatError("BCD out of bounds");
+      }
+      byteWriter.push(Math.floor(value / 10) + 0x30);
+      byteWriter.push(value % 10 + 0x30);
+    } else {
+      const value = reader.readNumber(10);
+      if (value >= 1000) {
+        throw new FormatError("BCD out of bounds");
+      }
+      byteWriter.push(Math.floor(value / 100) + 0x30);
+      byteWriter.push(Math.floor((value % 100) / 10) + 0x30);
+      byteWriter.push(value % 10 + 0x30);
+    }
+  }
+}
+
+class ByteWriter {
+  buf: Uint8Array<ArrayBuffer> = new Uint8Array();
+  len: number = 0;
+
+  push(value: number): void {
+    this.buf[this.len++] = value;
+  }
+
+  reserve(demand: number): void {
+    const capacity = this.buf.length;
+    if (demand <= capacity) {
+      return;
+    }
+    const newCapacity = Math.max(demand, capacity * 2);
+    this.buf = new Uint8Array(this.buf.buffer.transfer(newCapacity));
+  }
+
+  currentCopy(): Uint8Array {
+    return this.buf.slice(0, this.len);
+  }
+
+  clear(): void {
+    this.len = 0;
+  }
 }

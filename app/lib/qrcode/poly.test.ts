@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { test } from "@fast-check/vitest";
+import { fc, test } from "@fast-check/vitest";
 import { LOG_ZERO } from "./gf256";
 import { correctErrors, POLYNOMIALS, RSPolynomial } from "./poly";
 
@@ -191,4 +191,52 @@ test("Correction example (small)", () => {
 
   correctErrors(numEccBytes, buf, { p: 0 });
   expect(buf).toEqual(original);
+});
+
+function eccProfile(): fc.Arbitrary<{
+  t: number,
+  p: number,
+  block: Uint8Array,
+  blockWithError: Uint8Array,
+}> {
+  return fc.tuple(
+    fc.uint8Array({ minLength: 1, maxLength: 150 }),
+    fc.nat({ max: 30 }),
+    fc.nat({ max: 3 })
+  ).chain(([data, t, p]) => {
+    const block = new Uint8Array(data.length + t + p);
+    block.set(data);
+    POLYNOMIALS[t + p].generate(block);
+    return fc.array(
+      fc.tuple(
+        fc.nat({ max: block.length - 1 }),
+        fc.nat({ max: 255 })
+      ),
+      {
+        maxLength: Math.floor(t / 2),
+      }
+    ).map((errorValues) => {
+      const blockWithError = block.slice();
+      for (const [errorLocation, errorValue] of errorValues) {
+        blockWithError[errorLocation] |= errorValue;
+      }
+      return {
+        t,
+        p,
+        block,
+        blockWithError,
+      };
+    });
+  });
+}
+
+test.prop([eccProfile()])("Correction behavior", ({
+  t,
+  p,
+  block,
+  blockWithError,
+}) => {
+  const buf = blockWithError.slice();
+  correctErrors(t + p, buf, { p });
+  expect(buf).toEqual(block);
 });

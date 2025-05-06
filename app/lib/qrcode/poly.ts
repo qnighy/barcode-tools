@@ -129,7 +129,7 @@ function findErrorLocations(
   syndromes: Uint8Array,
 ): number[] {
   const coeffs = computeLFSR(syndromes.subarray(0, errorCorrectionCapability));
-  console.log("Coefficients:", coeffs);
+  // console.log("Coefficients:", coeffs);
   const logAlpha = log(ALPHA);
   const errorLocations: number[] = [];
   for (let i = 0; i < block.length; i++) {

@@ -1,5 +1,5 @@
 import { Bits } from "./bit-writer";
-import { POLYNOMIALS } from "./poly";
+import { correctErrors, POLYNOMIALS } from "./poly";
 import { ErrorCorrectionLevelOrNone, SPECS, Version } from "./specs";
 
 export function encodeErrorCorrection(
@@ -79,6 +79,77 @@ export function encodeErrorCorrection(
 
   return {
     bitLength: spec.truncatedDataCapacityBits,
+    bytes: outputBytes,
+  };
+}
+
+export function decodeErrorCorrection(
+  bits: Bits,
+  version: Version,
+  errorCorrectionLevel: ErrorCorrectionLevelOrNone
+): Bits {
+  const spec = SPECS[version];
+  const errorCorrectionSpec = spec.errorCorrectionSpecs[errorCorrectionLevel];
+  if (!errorCorrectionSpec) {
+    throw new Error(`Error correction level ${errorCorrectionLevel} not supported for version ${version}`);
+  }
+
+  // It's 4 in M1 and M3, 0 otherwise
+  const zeroBits = spec.dataCapacityBytes * 8 - spec.truncatedDataCapacityBits;
+  const outputBytes = new Uint8Array(Math.ceil(errorCorrectionSpec.dataBits / 8));
+
+  const maxBlockSize = Math.ceil(spec.dataCapacityBytes / errorCorrectionSpec.numEccBlocks);
+  const blockSize1 = Math.floor(spec.dataCapacityBytes / errorCorrectionSpec.numEccBlocks);
+  const blockSize2 = blockSize1 + 1;
+  const blockSize2Count = spec.dataCapacityBytes % errorCorrectionSpec.numEccBlocks;
+  const blockSize1Count = errorCorrectionSpec.numEccBlocks - blockSize2Count;
+
+  const dataSize1 = blockSize1 - errorCorrectionSpec.numEccBytesEach;
+  const blockBuffer = new Uint8Array(maxBlockSize);
+  const block1 = blockBuffer.subarray(0, blockSize1);
+  for (let i = 0; i < errorCorrectionSpec.numEccBlocks; i++) {
+    const blockSize = i < blockSize1Count ? blockSize1 : blockSize2;
+    const dataSize = blockSize - errorCorrectionSpec.numEccBytesEach;
+    const block = i < blockSize1Count ? block1 : blockBuffer;
+
+    for (let j = 0; j < dataSize1; j++) {
+      block[j] = bits.bytes[errorCorrectionSpec.numEccBlocks * j + i];
+    }
+    if (i >= blockSize1Count) {
+      const j = dataSize1;
+      block[j] = bits.bytes[errorCorrectionSpec.numEccBlocks * j + i - blockSize1Count];
+    }
+    if (i === errorCorrectionSpec.numEccBlocks - 1 && zeroBits > 0) {
+      // Zero-out part of the last byte
+      bits.bytes[dataSize - 1] &= -(1 << zeroBits);
+    }
+
+    if (zeroBits > 0) {
+      // Not byte-aligned
+      const bytePos = Math.floor(errorCorrectionSpec.dataBits / 8);
+      for (let j = 0; j < errorCorrectionSpec.numEccBytesEach; j++) {
+        const index = bytePos + errorCorrectionSpec.numEccBlocks * j + i;
+        const byte1 = bits.bytes[index];
+        const byte2 = bits.bytes[index + 1];
+        block[dataSize + j] = (byte1 << (8 - zeroBits)) | (byte2 >>> zeroBits);
+      }
+    } else {
+      const bytePos = errorCorrectionSpec.dataBytes;
+      for (let j = 0; j < errorCorrectionSpec.numEccBytesEach; j++) {
+        block[dataSize + j] = bits.bytes[bytePos + errorCorrectionSpec.numEccBlocks * j + i];
+      }
+    }
+
+    correctErrors(errorCorrectionSpec.numEccBytesEach, block, { p: errorCorrectionSpec.p });
+
+    outputBytes.subarray(
+      dataSize1 * i + Math.max(0, i - blockSize1Count),
+      dataSize1 * i + Math.max(0, i - blockSize1Count) + dataSize
+    ).set(block.subarray(0, dataSize));
+  }
+
+  return {
+    bitLength: errorCorrectionSpec.dataBits,
     bytes: outputBytes,
   };
 }

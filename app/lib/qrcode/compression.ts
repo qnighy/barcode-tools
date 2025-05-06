@@ -443,14 +443,22 @@ function writeByteChunk(
 }
 
 function isKanji_(prevByte: number, byte: number): boolean {
-  if (byte >= 0x40 && byte <= 0xFC) {
-    return (
+  return (
+    byte >= 0x40 &&
+    // Kanji mode can technically encode 0x7F or 0xFD - 0xFF, but
+    // the wording in the standard suggests that
+    // it is not a correct encoding.
+    byte <= 0xFC &&
+    byte !== 0x7F &&
+    (
       (prevByte >= 0x81 && prevByte <= 0x9F) ||
       (prevByte >= 0xE0 && prevByte < 0xEB) ||
+      // 13 bit (8192 patterns) is a bit small
+      // for 43 (upper) x 192 (lower) = 8256 patterns.
+      // As a result, we cannot encode 0xEBC0 - 0xEBFC.
       (prevByte === 0xEB && byte <= 0xBF)
-    );
-  }
-  return false;
+    )
+  );
 }
 
 function writeKanjiChunk(
@@ -553,10 +561,18 @@ export function decompressAsBinaryParts(
             break;
           }
         }
-        case params.digitModeIndicator: {
+        case params.digitModeIndicator:
           readDigitChunk(reader, byteWriter, params);
           break;
-        }
+        case params.alphanumericModeIndicator:
+          readAlphanumericChunk(reader, byteWriter, params);
+          break;
+        case params.byteModeIndicator:
+          readByteChunk(reader, byteWriter, params);
+          break;
+        case params.kanjiModeIndicator:
+          readKanjiChunk(reader, byteWriter, params);
+          break;
         case params.ECIModeIndicator: {
           parts.push({
             eciDesignator: currentECI,
@@ -633,6 +649,99 @@ function readDigitChunk(
       byteWriter.push(Math.floor((value % 100) / 10) + 0x30);
       byteWriter.push(value % 10 + 0x30);
     }
+  }
+}
+
+function readAlphanumericChunk(
+  reader: BitReader,
+  byteWriter: ByteWriter,
+  params: CodingParameters,
+  length?: number
+): void {
+  length ??= reader.readNumber(params.alphanumericModeCountBits);
+  byteWriter.reserve(byteWriter.buf.length + length);
+  for (let i = 0; i < length; i += 2) {
+    const size = length - i;
+    if (size <= 1) {
+      const value = reader.readNumber(6);
+      if (value >= 45) {
+        throw new FormatError("Alphanumeric code out of bounds");
+      }
+      byteWriter.push(alphanumericByteFromCode(value));
+    } else {
+      const value = reader.readNumber(11);
+      if (value >= 45 * 45) {
+        throw new FormatError("Alphanumeric code out of bounds");
+      }
+      byteWriter.push(alphanumericByteFromCode(Math.floor(value / 45)));
+      byteWriter.push(alphanumericByteFromCode(value % 45));
+    }
+  }
+}
+
+const ALPHANUMERIC_SYMBOL_LIST = [
+  // 36: ' '
+  0x20,
+  // 37: '$'
+  0x24,
+  // 38: '%'
+  0x25,
+  // 39: '*'
+  0x2A,
+  // 40: '+'
+  0x2B,
+  // 41: '-'
+  0x2D,
+  // 42: '.'
+  0x2E,
+  // 43: '/'
+  0x2F,
+  // 44: ':'
+  0x3A,
+];
+function alphanumericByteFromCode(code: number): number {
+  if (code <= 9) {
+    return code + 0x30;
+  } else if (code <= 35) {
+    return code + (0x41 - 10);
+  } else {
+    return ALPHANUMERIC_SYMBOL_LIST[code - 36];
+  }
+}
+
+function readByteChunk(
+  reader: BitReader,
+  byteWriter: ByteWriter,
+  params: CodingParameters,
+  length?: number
+): void {
+  length ??= reader.readNumber(params.byteModeCountBits);
+  byteWriter.reserve(byteWriter.buf.length + length);
+  for (let i = 0; i < length; i++) {
+    const value = reader.readNumber(8);
+    byteWriter.push(value);
+  }
+}
+
+function readKanjiChunk(
+  reader: BitReader,
+  byteWriter: ByteWriter,
+  params: CodingParameters,
+  length?: number
+): void {
+  length ??= reader.readNumber(params.kanjiModeCountBits);
+  byteWriter.reserve(byteWriter.buf.length + length * 2);
+  for (let i = 0; i < length; i++) {
+    const value = reader.readNumber(13);
+    const upper = Math.floor(value / 0xC0);
+    const lower = value % 0xC0;
+    const byte1 = upper + (upper < 0x1F ? 0x81 : 0xC1);
+    const byte2 = lower + 0x40;
+    if (byte1 === 0x7F || byte1 >= 0xFD) {
+      throw new FormatError("Invalid kanji code lower byte");
+    }
+    byteWriter.push(byte1);
+    byteWriter.push(byte2);
   }
 }
 

@@ -456,3 +456,62 @@ test("digit decoding example on 1-H symbol", () => {
     }
   ]);
 });
+
+test("alphanumeric decoding example on 1-H symbol", () => {
+  const result = decompressAsBinaryParts({
+    bitLength: 41,
+    bytes: new Uint8Array([
+      // mode  0010
+      // size      0000(00101)
+      0b00100000,
+      // ...   00101
+      // chunk      001(11001110)
+      0b00101001,
+      // ...   11001110
+      0b11001110,
+      // chunk 11100111(001)
+      0b11100111,
+      // ...   001
+      // chunk    00001(0)
+      0b00100001,
+      // ...   0
+      // pad    0000000
+      0b00000000,
+    ]),
+  }, V9Parameters);
+  expect(result).toEqual([
+    {
+      eciDesignator: null,
+      bytes: new TextEncoder().encode("AC-42"),
+    }
+  ]);
+});
+
+test("kanji decoding example on 1-H symbol", () => {
+  const result = decompressAsBinaryParts({
+    bitLength: 38,
+    bytes: new Uint8Array([
+      // mode  1000
+      // size      0000(0010)
+      0b10000000,
+      // ...   0010
+      // chunk     0110(110011111)
+      0b00100110,
+      // ...   11001111(1)
+      0b11001111,
+      // ...   1
+      // chunk  1101010(101010)
+      0b11101010,
+      // ...   101010
+      // pad         00
+      0b10101000,
+    ]),
+  }, V9Parameters);
+  expect(result).toEqual([
+    {
+      eciDesignator: null,
+      // 935F (点), E4AA (茗)
+      bytes: new Uint8Array([0x93, 0x5F, 0xE4, 0xAA]),
+    }
+  ]);
+});

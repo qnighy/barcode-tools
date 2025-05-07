@@ -1,6 +1,6 @@
 import { encodeBCH5, encodeBCH6 } from "./bch";
 import { BitExtMatrix, FUNCTION_PATTERN_FLAG, METADATA_AREA_FLAG, NON_DATA_MASK } from "./bit-ext-matrix";
-import { Bits } from "./bit-writer";
+import { Bits, BitWriter } from "./bit-writer";
 import { ErrorCorrectionLevelOrNone, isMicroQRVersion, MicroQRVersion, QRVersion, SPECS, Version } from "./specs";
 
 export function fillFunctionPatterns(
@@ -150,6 +150,28 @@ export function pourDataBits(
       currentByte = null;
     }
   }
+}
+
+export function collectDataBits(
+  mat: BitExtMatrix,
+  version: Version,
+  flipped: boolean
+): Bits {
+  const { truncatedDataCapacityBits } = SPECS[version];
+  const writer = new BitWriter();
+  for (const [x, y] of bitPositions(mat, version)) {
+    if (mat.getExtAt(x, y) & NON_DATA_MASK) {
+      continue;
+    }
+    if (writer.bitLength >= truncatedDataCapacityBits) {
+      break;
+    }
+    writer.pushNumber(
+      flipped ? mat.getAt(y, x) : mat.getAt(x, y),
+      1
+    );
+  }
+  return writer.transferToBytes();
 }
 
 export function* bitPositions(mat: BitExtMatrix, version: Version): IterableIterator<[number, number]> {

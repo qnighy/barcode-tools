@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { bitPositions, fillFunctionPatterns, pourDataBits, pourMetadataBits } from "./layout";
+import { bitPositions, collectQRMetadataBits, fillFunctionPatterns, pourDataBits, pourMetadataBits } from "./layout";
 import { SPECS, Version, VERSIONS } from "./specs";
 import { Bits } from "./bit-writer";
 import { BitExtMatrix, METADATA_AREA_FLAG, NON_DATA_MASK } from "./bit-ext-matrix";
@@ -528,6 +528,92 @@ test("pourMetadataBits as in Annex I QR code", () => {
     3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0,
     3, 3, 3, 3, 3, 3, 3, 2, 5, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0,
   ]));
+});
+
+test("collectQRMetadataBits as in Annex I QR code (read from top-left)", () => {
+  const version: Version = 1;
+  const { width } = SPECS[version];
+  const mat = new BitExtMatrix(width, [
+    3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 0, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3,
+    3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 1, 1, 2, 3, 2, 2, 2, 2, 2, 3,
+    3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 0, 0, 0, 2, 3, 2, 3, 3, 3, 2, 3,
+    3, 2, 3, 3, 3, 2, 3, 2, 5, 1, 0, 0, 0, 2, 3, 2, 3, 3, 3, 2, 3,
+    3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 1, 1, 2, 3, 2, 3, 3, 3, 2, 3,
+    3, 2, 2, 2, 2, 2, 3, 2, 5, 0, 0, 0, 1, 2, 3, 2, 2, 2, 2, 2, 3,
+    3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3, 2, 3, 3, 3, 3, 3, 3, 3,
+    2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 0, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2,
+    5, 4, 5, 5, 5, 5, 3, 4, 4, 1, 0, 0, 1, 4, 5, 5, 5, 5, 5, 4, 4,
+    0, 0, 0, 1, 0, 1, 2, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0,
+    0, 0, 1, 0, 0, 0, 3, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 1, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0,
+    0, 0, 0, 1, 1, 1, 3, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0,
+    2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0,
+    3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0,
+    3, 2, 2, 2, 2, 2, 3, 2, 5, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1,
+    3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0,
+    3, 2, 3, 3, 3, 2, 3, 2, 5, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
+    3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0,
+    3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0,
+    3, 3, 3, 3, 3, 3, 3, 2, 5, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0,
+  ]);
+  // Errors at top-left
+  mat.flipAt(8, 2);
+  mat.flipAt(5, 8);
+  // Errors at top-right and bottom-left
+  mat.flipAt(18, 8);
+  mat.flipAt(16, 8);
+  mat.flipAt(8, 17);
+  mat.flipAt(8, 19);
+
+  expect(collectQRMetadataBits(mat, version)).toEqual({
+    errorCorrectionLevel: "M",
+    mask: 0b010,
+    flipped: false,
+  });
+});
+
+test("collectQRMetadataBits as in Annex I QR code (read from top-right and bottom-left)", () => {
+  const version: Version = 1;
+  const { width } = SPECS[version];
+  const mat = new BitExtMatrix(width, [
+    3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 0, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3,
+    3, 2, 2, 2, 2, 2, 3, 2, 4, 1, 1, 1, 1, 2, 3, 2, 2, 2, 2, 2, 3,
+    3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 0, 0, 0, 2, 3, 2, 3, 3, 3, 2, 3,
+    3, 2, 3, 3, 3, 2, 3, 2, 5, 1, 0, 0, 0, 2, 3, 2, 3, 3, 3, 2, 3,
+    3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 1, 1, 2, 3, 2, 3, 3, 3, 2, 3,
+    3, 2, 2, 2, 2, 2, 3, 2, 5, 0, 0, 0, 1, 2, 3, 2, 2, 2, 2, 2, 3,
+    3, 3, 3, 3, 3, 3, 3, 2, 3, 2, 3, 2, 3, 2, 3, 3, 3, 3, 3, 3, 3,
+    2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 0, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2,
+    5, 4, 5, 5, 5, 5, 3, 4, 4, 1, 0, 0, 1, 4, 5, 5, 5, 5, 5, 4, 4,
+    0, 0, 0, 1, 0, 1, 2, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0,
+    0, 0, 1, 0, 0, 0, 3, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 1, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0,
+    0, 0, 0, 1, 1, 1, 3, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0,
+    2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0,
+    3, 3, 3, 3, 3, 3, 3, 2, 4, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0,
+    3, 2, 2, 2, 2, 2, 3, 2, 5, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1,
+    3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0,
+    3, 2, 3, 3, 3, 2, 3, 2, 5, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
+    3, 2, 3, 3, 3, 2, 3, 2, 5, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0,
+    3, 2, 2, 2, 2, 2, 3, 2, 4, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0,
+    3, 3, 3, 3, 3, 3, 3, 2, 5, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0,
+  ]);
+  // Errors at top-left
+  mat.flipAt(8, 2);
+  mat.flipAt(8, 4);
+  mat.flipAt(5, 8);
+  mat.flipAt(6, 8);
+  mat.flipAt(7, 8);
+
+  // Errors at top-right and bottom-left
+  mat.flipAt(18, 8);
+  mat.flipAt(8, 19);
+
+  expect(collectQRMetadataBits(mat, version)).toEqual({
+    errorCorrectionLevel: "M",
+    mask: 0b010,
+    flipped: false,
+  });
 });
 
 test("pourMetadataBits as in Annex I Micro QR code", () => {

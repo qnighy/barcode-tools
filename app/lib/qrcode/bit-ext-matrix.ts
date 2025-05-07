@@ -60,6 +60,10 @@ export class BitExtMatrix {
     this.array[y * this.width + x] = value;
   }
 
+  flipAt(x: number, y: number): void {
+    this.setAt(x, y, this.getAt(x, y) ^ 1);
+  }
+
   clone(): BitExtMatrix {
     return new BitExtMatrix(this.width, this.array.slice());
   }

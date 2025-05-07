@@ -1,6 +1,7 @@
-import { encodeBCH5, encodeBCH6 } from "./bch";
+import { decodeBCH5, encodeBCH5, encodeBCH6 } from "./bch";
 import { BitExtMatrix, FUNCTION_PATTERN_FLAG, METADATA_AREA_FLAG, NON_DATA_MASK } from "./bit-ext-matrix";
 import { Bits, BitWriter } from "./bit-writer";
+import { UncorrectableBlockError } from "./poly";
 import { ErrorCorrectionLevelOrNone, isMicroQRVersion, MicroQRVersion, QRVersion, SPECS, Version } from "./specs";
 
 export function fillFunctionPatterns(
@@ -210,6 +211,7 @@ const QR_ECC_LEVEL_NUMBERS: Partial<Record<ErrorCorrectionLevelOrNone, number>> 
   Q: 0b11,
   H: 0b10,
 };
+const QR_ECC_LEVEL_NUMBERS_REVERSE: ErrorCorrectionLevelOrNone[] = ["M", "L", "H", "Q"];
 const MICROQR_SYMBOL_NUMBERS: Record<MicroQRVersion, Partial<Record<ErrorCorrectionLevelOrNone, number>>> = {
   M1: {
     NONE: 0b000,
@@ -320,6 +322,58 @@ function pourQRMetadataBits(
       mat.setExtAt(x, y, METADATA_AREA_FLAG | bit);
     }
   }
+}
+
+// It does not read version information, as that should be part of
+// grid detection.
+export function collectQRMetadataBits(
+  mat: BitExtMatrix,
+  version: QRVersion,
+): {
+  errorCorrectionLevel: ErrorCorrectionLevelOrNone;
+  mask: number;
+  flipped: boolean;
+} {
+  const spec = SPECS[version];
+  const { width, height } = spec;
+
+  const prevErrors: UncorrectableBlockError[] = [];
+  for (const [flipped, position] of [
+    [false, 0],
+    [false, 1],
+    [true, 0],
+    [true, 1],
+  ] satisfies [boolean, 0 | 1][]) {
+    const half_positions = QR_FORMAT_INFO_POSITIONS.slice(position * 15, position * 15 + 15)
+    let formatInfoBits = 0;
+    for (const [bitPos, relX, relY] of half_positions) {
+      const x = relX < 0 ? width + relX : relX;
+      const y = relY < 0 ? height + relY : relY;
+      const xf = flipped ? y : x;
+      const yf = flipped ? x : y;
+      formatInfoBits |= mat.getAt(xf, yf) << bitPos;
+    }
+    try {
+      const metadata = decodeBCH5(formatInfoBits ^ QR_FORMAT_INFO_MASK, 0);
+      const mask = metadata & 0b111;
+      const eccLevel = QR_ECC_LEVEL_NUMBERS_REVERSE[(metadata >> 3) & 0b11];
+      return {
+        errorCorrectionLevel: eccLevel,
+        mask,
+        flipped,
+      };
+    } catch (e) {
+      if (e instanceof UncorrectableBlockError) {
+        prevErrors.push(e);
+      } else {
+        throw e;
+      }
+    }
+  }
+  throw new AggregateError(
+    prevErrors,
+    "None of the format information bits could be decoded."
+  );
 }
 
 const MICRO_QR_FORMAT_INFO_MASK = 0b100010001000101;

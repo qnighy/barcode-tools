@@ -1,10 +1,10 @@
 import { BitExtMatrix } from "./bit-ext-matrix";
-import { BinaryParts } from "./compression";
-import { encodeErrorCorrection } from "./ecc";
+import { BinaryParts, decompressAsBinaryParts } from "./compression";
+import { decodeErrorCorrection, encodeErrorCorrection } from "./ecc";
 import { fitBytes, QRSymbolType } from "./fitting";
-import { fillFunctionPatterns, pourDataBits } from "./layout";
-import { applyAutoMaskAndMetadata } from "./mask";
-import { ErrorCorrectionLevelOrNone, SPECS, Version } from "./specs";
+import { collectDataBits, collectMicroQRMetadataBits, collectQRMetadataBits, fillFunctionPatterns, pourDataBits } from "./layout";
+import { applyAutoMaskAndMetadata, applyMask } from "./mask";
+import { CODING_SPECS, ErrorCorrectionLevelOrNone, isMicroQRVersion, MicroQRVersion, SPECS, Version } from "./specs";
 import { generateSVGFromMatrix } from "./svg";
 
 export type EncodeToMatrixOptions = {
@@ -81,5 +81,75 @@ export function encodeToSVG(text: string, options: EncodeToSVGOptions): EncodeTo
     bodyBitLength,
     matrix,
     svg,
+  };
+}
+
+export type DecodeToMatrixResult = {
+  version: Version;
+  errorCorrectionLevel: ErrorCorrectionLevelOrNone;
+  text: string;
+};
+
+export function decodeFromMatrix(matrix: BitExtMatrix): DecodeToMatrixResult {
+  let version: Version;
+  if (matrix.width < 21) {
+    const v = (matrix.width - 9) / 2;
+    if (v === 1 || v === 2 || v === 3 || v === 4) {
+      version = `M${v}` as MicroQRVersion;
+    } else {
+      throw new RangeError("Invalid QR Code version");
+    }
+  } else {
+    const v = (matrix.width - 17) / 4;
+    if (Number.isInteger(v) && v >= 1 && v <= 40) {
+      version = v as Version;
+    } else {
+      throw new RangeError("Invalid QR Code version");
+    }
+  }
+
+  let errorCorrectionLevel: ErrorCorrectionLevelOrNone;
+  let mask: number;
+  if (isMicroQRVersion(version)) {
+    const result = collectMicroQRMetadataBits(matrix);
+    if (result.version !== version) {
+      throw new RangeError("Invalid QR Code version");
+    }
+    errorCorrectionLevel = result.errorCorrectionLevel;
+    mask = result.mask;
+  } else {
+    const result = collectQRMetadataBits(matrix, version);
+    errorCorrectionLevel = result.errorCorrectionLevel;
+    mask = result.mask;
+  }
+
+  fillFunctionPatterns(matrix, version);
+  applyMask(matrix, version, mask);
+
+  const bitsWithEcc = collectDataBits(matrix, version);
+  const bodyBits = decodeErrorCorrection(bitsWithEcc, version, errorCorrectionLevel);
+
+  const parts = decompressAsBinaryParts(bodyBits, CODING_SPECS[SPECS[version].codingVersion]);
+
+  let text = "";
+  for (const part of parts) {
+    switch (part.eciDesignator ?? 3) {
+      case 3:
+        // ISO/IEC 8859-1
+        text += new TextDecoder("iso-8859-1").decode(part.bytes);
+        break;
+      case 26:
+        // UTF-8
+        text += new TextDecoder("utf-8").decode(part.bytes);
+        break;
+      default:
+        throw new Error(`Unsupported ECI designator: ${part.eciDesignator!.toString().padStart(6, "0")}`);
+    }
+  }
+
+  return {
+    version,
+    errorCorrectionLevel,
+    text,
   };
 }

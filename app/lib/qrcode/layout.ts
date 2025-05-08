@@ -30,10 +30,10 @@ export function fillFunctionPatterns(
     }
     // Format information area
     for (let x = 1; x < 9; x++) {
-      mat.setExtAt(x, 8, METADATA_AREA_FLAG);
+      mat.setExtAt(x, 8, METADATA_AREA_FLAG | mat.getAt(x, 8));
     }
     for (let y = 1; y < 9; y++) {
-      mat.setExtAt(8, y, METADATA_AREA_FLAG);
+      mat.setExtAt(8, y, METADATA_AREA_FLAG | mat.getAt(8, y));
     }
   } else {
     // The finder pattern + separator
@@ -84,30 +84,30 @@ export function fillFunctionPatterns(
     // Format information area
     for (let x = 0; x < 9; x++) {
       if (x !== 6) {
-        mat.setExtAt(x, 8, METADATA_AREA_FLAG);
+        mat.setExtAt(x, 8, METADATA_AREA_FLAG | mat.getAt(x, 8));
       }
     }
     for (let x = width - 8; x < width; x++) {
-      mat.setExtAt(x, 8, METADATA_AREA_FLAG);
+      mat.setExtAt(x, 8, METADATA_AREA_FLAG | mat.getAt(x, 8));
     }
     for (let y = 0; y < 9; y++) {
       if (y !== 6) {
-        mat.setExtAt(8, y, METADATA_AREA_FLAG);
+        mat.setExtAt(8, y, METADATA_AREA_FLAG | mat.getAt(8, y));
       }
     }
     for (let y = height - 8; y < height; y++) {
-      mat.setExtAt(8, y, METADATA_AREA_FLAG);
+      mat.setExtAt(8, y, METADATA_AREA_FLAG | mat.getAt(8, y));
     }
     if (spec.versionInfoSize) {
       // Version information area
       for (let y = 0; y < 6; y++) {
         for (let x = width - 11; x < width - 8; x++) {
-          mat.setExtAt(x, y, METADATA_AREA_FLAG);
+          mat.setExtAt(x, y, METADATA_AREA_FLAG | mat.getAt(x, y));
         }
       }
       for (let y = height - 11; y < height - 8; y++) {
         for (let x = 0; x < 6; x++) {
-          mat.setExtAt(x, y, METADATA_AREA_FLAG);
+          mat.setExtAt(x, y, METADATA_AREA_FLAG | mat.getAt(x, y));
         }
       }
     }

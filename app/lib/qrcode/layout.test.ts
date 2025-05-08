@@ -568,7 +568,6 @@ test("collectQRMetadataBits as in Annex I QR code (read from top-left)", () => {
   expect(collectQRMetadataBits(mat, version)).toEqual({
     errorCorrectionLevel: "M",
     mask: 0b010,
-    flipped: false,
   });
 });
 
@@ -612,7 +611,6 @@ test("collectQRMetadataBits as in Annex I QR code (read from top-right and botto
   expect(collectQRMetadataBits(mat, version)).toEqual({
     errorCorrectionLevel: "M",
     mask: 0b010,
-    flipped: false,
   });
 });
 

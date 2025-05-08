@@ -155,8 +155,7 @@ export function pourDataBits(
 
 export function collectDataBits(
   mat: BitExtMatrix,
-  version: Version,
-  flipped: boolean
+  version: Version
 ): Bits {
   const { truncatedDataCapacityBits } = SPECS[version];
   const writer = new BitWriter();
@@ -168,7 +167,7 @@ export function collectDataBits(
       break;
     }
     writer.pushNumber(
-      flipped ? mat.getAt(y, x) : mat.getAt(x, y),
+      mat.getAt(x, y),
       1
     );
   }
@@ -332,26 +331,18 @@ export function collectQRMetadataBits(
 ): {
   errorCorrectionLevel: ErrorCorrectionLevelOrNone;
   mask: number;
-  flipped: boolean;
 } {
   const spec = SPECS[version];
   const { width, height } = spec;
 
   const prevErrors: UncorrectableBlockError[] = [];
-  for (const [flipped, position] of [
-    [false, 0],
-    [false, 1],
-    [true, 0],
-    [true, 1],
-  ] satisfies [boolean, 0 | 1][]) {
+  for (const position of [0, 1]) {
     const half_positions = QR_FORMAT_INFO_POSITIONS.slice(position * 15, position * 15 + 15)
     let formatInfoBits = 0;
     for (const [bitPos, relX, relY] of half_positions) {
       const x = relX < 0 ? width + relX : relX;
       const y = relY < 0 ? height + relY : relY;
-      const xf = flipped ? y : x;
-      const yf = flipped ? x : y;
-      formatInfoBits |= mat.getAt(xf, yf) << bitPos;
+      formatInfoBits |= mat.getAt(x, y) << bitPos;
     }
     try {
       const metadata = decodeBCH5(formatInfoBits ^ QR_FORMAT_INFO_MASK, 0);
@@ -360,7 +351,6 @@ export function collectQRMetadataBits(
       return {
         errorCorrectionLevel: eccLevel,
         mask,
-        flipped,
       };
     } catch (e) {
       if (e instanceof UncorrectableBlockError) {

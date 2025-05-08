@@ -229,6 +229,16 @@ const MICROQR_SYMBOL_NUMBERS: Record<MicroQRVersion, Partial<Record<ErrorCorrect
     Q: 0b111,
   },
 };
+const MICROQR_SYMBOL_NUMBERS_REVERSE: [MicroQRVersion, ErrorCorrectionLevelOrNone][] = [
+  ["M1", "NONE"],
+  ["M2", "L"],
+  ["M2", "M"],
+  ["M3", "L"],
+  ["M3", "M"],
+  ["M4", "L"],
+  ["M4", "M"],
+  ["M4", "Q"],
+];
 
 export function pourMetadataBits(
   mat: BitExtMatrix,
@@ -391,4 +401,35 @@ function pourMicroQRMetadataBits(
     const y = 8;
     mat.setExtAt(x, y, METADATA_AREA_FLAG | bit);
   }
+}
+
+// It does not read version information, as that should be part of
+// grid detection.
+export function collectMicroQRMetadataBits(
+  mat: BitExtMatrix,
+): {
+  version: MicroQRVersion;
+  errorCorrectionLevel: ErrorCorrectionLevelOrNone;
+  mask: number;
+} {
+  let formatInfoBits = 0;
+  for (let i = 0; i < 8; i++) {
+    const x = 8;
+    const y = i + 1;
+    formatInfoBits |= mat.getAt(x, y) << i;
+  }
+  for (let i = 8; i < 15; i++) {
+    const x = 15 - i;
+    const y = 8;
+    formatInfoBits |= mat.getAt(x, y) << i;
+  }
+  const metadata = decodeBCH5(formatInfoBits ^ MICRO_QR_FORMAT_INFO_MASK, 0);
+  const mask = metadata & 0b11;
+  const symbolNumber = (metadata >>> 2) & 0b111;
+  const [version, eccLevel] = MICROQR_SYMBOL_NUMBERS_REVERSE[symbolNumber];
+  return {
+    version,
+    errorCorrectionLevel: eccLevel,
+    mask,
+  };
 }

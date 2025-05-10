@@ -1,23 +1,12 @@
 import path from "node:path";
-import fs from "node:fs";
 import { test } from "vitest";
-import { PNG } from "pngjs";
 import { threshold } from "./thresholding";
+import { PNGFixtures } from "./png-helper";
+
+const fixtures = new PNGFixtures(path.join(__dirname, "./fixtures"));
 
 test("image thresholding (gaussianSigma = 32)", async () => {
-  const data = await fs.promises.readFile(
-    path.join(__dirname, "./fixtures/qr-test1-small.png")
-  );
-  const png = await new Promise<PNG>((resolve, reject) => {
-    new PNG({ filterType: 4 }).parse(data, (error, result) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(result);
-      }
-    });
-  });
-  console.log(png.gamma);
+  const png = await fixtures.readPNG("qr-test1-small.png");
   threshold(
     png.width,
     png.height,
@@ -29,31 +18,11 @@ test("image thresholding (gaussianSigma = 32)", async () => {
     32
   );
 
-  await new Promise<void>((resolve, reject) => {
-    png.pack().pipe(
-      fs.createWriteStream(path.join(__dirname, "./fixtures/qr-test1-small-thresholded-32.png"))
-    ).on("finish", () => {
-      resolve();
-    }).on("error", (error) => {
-      reject(error);
-    });
-  });
+  await fixtures.expectPNG("qr-test1-small-thresholded-32.png", png);
 });
 
 test("image thresholding (gaussianSigma = 256)", async () => {
-  const data = await fs.promises.readFile(
-    path.join(__dirname, "./fixtures/qr-test1-small.png")
-  );
-  const png = await new Promise<PNG>((resolve, reject) => {
-    new PNG({ filterType: 4 }).parse(data, (error, result) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(result);
-      }
-    });
-  });
-  console.log(png.gamma);
+  const png = await fixtures.readPNG("qr-test1-small.png");
   threshold(
     png.width,
     png.height,
@@ -65,13 +34,5 @@ test("image thresholding (gaussianSigma = 256)", async () => {
     256
   );
 
-  await new Promise<void>((resolve, reject) => {
-    png.pack().pipe(
-      fs.createWriteStream(path.join(__dirname, "./fixtures/qr-test1-small-thresholded-256.png"))
-    ).on("finish", () => {
-      resolve();
-    }).on("error", (error) => {
-      reject(error);
-    });
-  });
+  await fixtures.expectPNG("qr-test1-small-thresholded-256.png", png);
 });

@@ -1,36 +1,25 @@
-export function toLuminances(
-  width: number,
-  height: number,
-  data: Uint8ClampedArray<ArrayBuffer>,
-): Matrix<number, Float32Array<ArrayBuffer>> {
-  const luminances = new Matrix<number, Float32Array<ArrayBuffer>>(width, height, new Float32Array(width * height));
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const r = toLinear(data[(y * width + x) * 4] / 255);
-      const g = toLinear(data[(y * width + x) * 4 + 1] / 255);
-      const b = toLinear(data[(y * width + x) * 4 + 2] / 255);
-      const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-      luminances.setAt(x, y, luminance);
-    }
-  }
-  return luminances;
-}
+import { Uint8x4Image, VectorImage } from "./image";
 
 export function fromThresholded(
   mat: Matrix<number, Uint8ClampedArray<ArrayBuffer>>,
-): Uint8ClampedArray<ArrayBuffer> {
+): Uint8x4Image {
   const { width, height } = mat;
-  const data = new Uint8ClampedArray(width * height * 4);
+  const output = new VectorImage<number, Uint8ClampedArray<ArrayBuffer>>(
+    width,
+    height,
+    4,
+    new Uint8ClampedArray(width * height * 4)
+  );
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const value = mat.getAt(x, y);
-      data[(y * width + x) * 4] = value;
-      data[(y * width + x) * 4 + 1] = value;
-      data[(y * width + x) * 4 + 2] = value;
-      data[(y * width + x) * 4 + 3] = 255;
+      output.setAt(x, y, 0, value);
+      output.setAt(x, y, 1, value);
+      output.setAt(x, y, 2, value);
+      output.setAt(x, y, 3, 255);
     }
   }
-  return data;
+  return output;
 }
 
 export function threshold(
@@ -195,12 +184,4 @@ function applyGaussianB(
   }
 
   return output;
-}
-
-function toLinear(value: number): number {
-  if (value < 0.04045) {
-    return value / 12.92;
-  } else {
-    return ((value + 0.055) / 1.055) ** 2.4;
-  }
 }

@@ -1,3 +1,78 @@
+import { FloatImage, Uint8x4Image } from "./image";
+import { fromThresholded, threshold } from "./thresholding";
+
+export function find(
+  luminances: FloatImage
+): Uint8x4Image {
+  const gaussianSigma = 32;
+  const thresholded = threshold(luminances, gaussianSigma);
+
+  const output = fromThresholded(thresholded);
+  for (let y = 0; y < luminances.height; y++) {
+    let lastValue = 0;
+    let lastX1 = -1;
+    let lastX2 = -1;
+    let lastX3 = -1;
+    let lastX4 = -1;
+    let lastX5 = -1;
+    for (let x = 0; x < luminances.width; x++) {
+      const currentValue = thresholded.getAt(x, y);
+      if (currentValue !== lastValue) {
+        const segment1 = x - lastX1;
+        const segment2 = lastX1 - lastX2;
+        const segment3 = lastX2 - lastX3;
+        const segment4 = lastX3 - lastX4;
+        const segment5 = lastX4 - lastX5;
+        // The average excess width of the dark module segments
+        const darkAdjust = (segment1 + segment5 - (segment2 + segment4)) / 8;
+        const unitSize = (segment1 + segment2 + segment3 + segment4 + segment5 - darkAdjust * 2) / 7;
+        const darkUnitSize = unitSize + darkAdjust * 2;
+        const lightUnitSize = unitSize - darkAdjust * 2;
+
+        const diff1 = Math.abs(segment1 / darkUnitSize - 1);
+        const diff2 = Math.abs(segment2 / lightUnitSize - 1);
+        const diff3 = Math.abs(segment3 / darkUnitSize - 3);
+        const diff4 = Math.abs(segment4 / lightUnitSize - 1);
+        const diff5 = Math.abs(segment5 / darkUnitSize - 1);
+
+        if (
+          lastX5 >= 0 &&
+          Math.abs(darkAdjust / unitSize) < 0.2 &&
+          diff1 < 0.5 &&
+          diff2 < 0.5 &&
+          diff3 < 0.5 &&
+          diff4 < 0.5 &&
+          diff5 < 0.5
+        ) {
+          for (let xx = lastX5; xx < lastX4; xx++) {
+            output.setAt(xx, y, 0, currentValue);
+          }
+          for (let xx = lastX4; xx < lastX3; xx++) {
+            output.setAt(xx, y, 0, 255 - currentValue);
+          }
+          for (let xx = lastX3; xx < lastX2; xx++) {
+            output.setAt(xx, y, 0, currentValue);
+          }
+          for (let xx = lastX2; xx < lastX1; xx++) {
+            output.setAt(xx, y, 0, 255 - currentValue);
+          }
+          for (let xx = lastX1; xx <= x; xx++) {
+            output.setAt(xx, y, 0, currentValue);
+          }
+        }
+
+        lastX5 = lastX4;
+        lastX4 = lastX3;
+        lastX3 = lastX2;
+        lastX2 = lastX1;
+        lastX1 = x;
+        lastValue = currentValue;
+      }
+    }
+  }
+  return output;
+}
+
 export function canny(
   width: number,
   height: number,

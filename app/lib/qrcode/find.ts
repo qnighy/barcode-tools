@@ -4,7 +4,7 @@ import { fromThresholded, threshold } from "./thresholding";
 export function find(
   luminances: FloatImage
 ): Uint8x4Image {
-  const gaussianSigma = 32;
+  const gaussianSigma = 8;
   const thresholded = threshold(luminances, gaussianSigma);
 
   const output = fromThresholded(thresholded);
@@ -44,19 +44,7 @@ export function find(
           diff4 < 0.5 &&
           diff5 < 0.5
         ) {
-          for (let xx = lastX5; xx < lastX4; xx++) {
-            output.setAt(xx, y, 0, currentValue);
-          }
-          for (let xx = lastX4; xx < lastX3; xx++) {
-            output.setAt(xx, y, 0, 255 - currentValue);
-          }
           for (let xx = lastX3; xx < lastX2; xx++) {
-            output.setAt(xx, y, 0, currentValue);
-          }
-          for (let xx = lastX2; xx < lastX1; xx++) {
-            output.setAt(xx, y, 0, 255 - currentValue);
-          }
-          for (let xx = lastX1; xx <= x; xx++) {
             output.setAt(xx, y, 0, currentValue);
           }
         }
@@ -66,6 +54,56 @@ export function find(
         lastX3 = lastX2;
         lastX2 = lastX1;
         lastX1 = x;
+        lastValue = currentValue;
+      }
+    }
+  }
+  for (let x = 0; x < luminances.width; x++) {
+    let lastValue = 0;
+    let lastY1 = -1;
+    let lastY2 = -1;
+    let lastY3 = -1;
+    let lastY4 = -1;
+    let lastY5 = -1;
+    for (let y = 0; y < luminances.height; y++) {
+      const currentValue = thresholded.getAt(x, y);
+      if (currentValue !== lastValue) {
+        const segment1 = y - lastY1;
+        const segment2 = lastY1 - lastY2;
+        const segment3 = lastY2 - lastY3;
+        const segment4 = lastY3 - lastY4;
+        const segment5 = lastY4 - lastY5;
+        // The average excess width of the dark module segments
+        const darkAdjust = (segment1 + segment5 - (segment2 + segment4)) / 8;
+        const unitSize = (segment1 + segment2 + segment3 + segment4 + segment5 - darkAdjust * 2) / 7;
+        const darkUnitSize = unitSize + darkAdjust * 2;
+        const lightUnitSize = unitSize - darkAdjust * 2;
+
+        const diff1 = Math.abs(segment1 / darkUnitSize - 1);
+        const diff2 = Math.abs(segment2 / lightUnitSize - 1);
+        const diff3 = Math.abs(segment3 / darkUnitSize - 3);
+        const diff4 = Math.abs(segment4 / lightUnitSize - 1);
+        const diff5 = Math.abs(segment5 / darkUnitSize - 1);
+
+        if (
+          lastY5 >= 0 &&
+          Math.abs(darkAdjust / unitSize) < 0.2 &&
+          diff1 < 0.5 &&
+          diff2 < 0.5 &&
+          diff3 < 0.5 &&
+          diff4 < 0.5 &&
+          diff5 < 0.5
+        ) {
+          for (let yy = lastY3; yy < lastY2; yy++) {
+            output.setAt(x, yy, 1, currentValue);
+          }
+        }
+
+        lastY5 = lastY4;
+        lastY4 = lastY3;
+        lastY3 = lastY2;
+        lastY2 = lastY1;
+        lastY1 = y;
         lastValue = currentValue;
       }
     }

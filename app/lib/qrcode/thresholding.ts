@@ -1,10 +1,9 @@
-export function threshold(
+export function toLuminances(
   width: number,
   height: number,
   data: Uint8ClampedArray<ArrayBuffer>,
-  gaussianSigma: number
-): void {
-  const luminances = new Matrix<number, Float32Array>(width, height, new Float32Array(width * height));
+): Matrix<number, Float32Array<ArrayBuffer>> {
+  const luminances = new Matrix<number, Float32Array<ArrayBuffer>>(width, height, new Float32Array(width * height));
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const r = toLinear(data[(y * width + x) * 4] / 255);
@@ -14,17 +13,46 @@ export function threshold(
       luminances.setAt(x, y, luminance);
     }
   }
+  return luminances;
+}
+
+export function fromThresholded(
+  mat: Matrix<number, Uint8ClampedArray<ArrayBuffer>>,
+): Uint8ClampedArray<ArrayBuffer> {
+  const { width, height } = mat;
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const value = mat.getAt(x, y);
+      data[(y * width + x) * 4] = value;
+      data[(y * width + x) * 4 + 1] = value;
+      data[(y * width + x) * 4 + 2] = value;
+      data[(y * width + x) * 4 + 3] = 255;
+    }
+  }
+  return data;
+}
+
+export function threshold(
+  luminances: Matrix<number, Float32Array<ArrayBuffer>>,
+  gaussianSigma: number
+): Matrix<number, Uint8ClampedArray<ArrayBuffer>> {
+  const { width, height } = luminances;
+
   const afterGaussian = applyGaussian(luminances, gaussianSigma);
 
+  const thresholded = new Matrix<number, Uint8ClampedArray<ArrayBuffer>>(
+    width,
+    height,
+    new Uint8ClampedArray(width * height)
+  );
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const newValue = Number(luminances.getAt(x, y) > afterGaussian.getAt(x, y));
-      data[(y * width + x) * 4 + 0] = fromLinear(newValue) * 255;
-      data[(y * width + x) * 4 + 1] = fromLinear(newValue) * 255;
-      data[(y * width + x) * 4 + 2] = fromLinear(newValue) * 255;
+      thresholded.setAt(x, y, newValue * 255);
     }
   }
-  return;
+  return thresholded;
 }
 
 class Matrix<T, A extends ArrayLike<T>> {
@@ -174,13 +202,5 @@ function toLinear(value: number): number {
     return value / 12.92;
   } else {
     return ((value + 0.055) / 1.055) ** 2.4;
-  }
-}
-
-function fromLinear(value: number): number {
-  if (value <= 0.0031308) {
-    return value * 12.92;
-  } else {
-    return 1.055 * value ** (1 / 2.4) - 0.055;
   }
 }

@@ -9,29 +9,38 @@ export class PNGFixtures {
     this.basePath = basePath;
   }
 
+  pathFor(filename: string): string {
+    return path.join(this.basePath, filename);
+  }
+
+  newPathFor(filename: string): string {
+    if (!/\.png$/.test(filename)) {
+      throw new Error(`Filename must end with .png: ${filename}`);
+    }
+    const newFilename = filename.replace(/\.png$/, `.new.png`);
+    return this.pathFor(newFilename);
+  }
+
   async readPNG(filename: string, options: ParserOptions = {}): Promise<PNGWithMetadata> {
-    const data = await fs.promises.readFile(
-      path.join(this.basePath, filename)
-    );
+    const data = await fs.promises.readFile(this.pathFor(filename));
     const buffer = Buffer.from(data.buffer, data.byteOffset, data.length);
     return PNG.sync.read(buffer, options);
   }
 
   async writePNG(filename: string, png: PNG, options: PackerOptions = {}): Promise<void> {
     const buffer = PNG.sync.write(png, options);
-    await fs.promises.writeFile(path.join(this.basePath, filename), buffer);
+    await fs.promises.writeFile(this.pathFor(filename), buffer);
   }
 
   async writeNewPNG(filename: string, png: PNG, options: PackerOptions = {}): Promise<void> {
-    if (!/\.png$/.test(filename)) {
-      throw new Error(`Filename must end with .png: ${filename}`);
-    }
-    const newFilename = filename.replace(/\.png$/, `.new.png`);
-    await this.writePNG(newFilename, png, options);
+    const buffer = PNG.sync.write(png, options);
+    await fs.promises.writeFile(this.newPathFor(filename), buffer);
   }
 
   async expectPNG(filename: string, png: PNG): Promise<void> {
-    if (!fs.existsSync(path.join(this.basePath, filename))) {
+    const expectPath = this.pathFor(filename);
+    const newPath = this.newPathFor(filename);
+    if (!fs.existsSync(expectPath)) {
       await this.writePNG(filename, png);
       return;
     }
@@ -43,6 +52,9 @@ export class PNGFixtures {
     if (!png.data.equals(expected.data)) {
       await this.writeNewPNG(filename, png);
       throw new Error(`PNG data does not match for ${filename}`);
+    }
+    if (fs.existsSync(newPath)) {
+      await fs.promises.unlink(newPath);
     }
   }
 }

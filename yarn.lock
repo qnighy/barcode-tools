@@ -1421,6 +1421,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@webgpu/types@npm:^0.1.60":
+  version: 0.1.60
+  resolution: "@webgpu/types@npm:0.1.60"
+  checksum: 10c0/6dcd28680637b41258287b241e6807160c78464cd67b008c1aaafdbe78e0f1eb1bdc4cace8c8628d2d088a449643e7af71804d33261865f00967557989b0e29b
+  languageName: node
+  linkType: hard
+
 "abbrev@npm:^3.0.0":
   version: 3.0.1
   resolution: "abbrev@npm:3.0.1"
@@ -1676,6 +1683,7 @@ __metadata:
     "@types/pngjs": "npm:^6.0.5"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
+    "@webgpu/types": "npm:^0.1.60"
     eslint: "npm:^9"
     eslint-config-next: "npm:^15.3.1"
     next: "npm:^15.3.1"

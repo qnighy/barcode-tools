@@ -21,6 +21,30 @@ export class ScalarImage<T, A extends ArrayLike<T>> {
     }
     return this.array[y * this.width + x];
   }
+  getMirroredAt(x: number, y: number): T {
+    const { width, height } = this;
+    if (x < 0 || x >= width) {
+      x = x % (width * 2);
+      if (x < -width) {
+        x += width * 2;
+      } else if (x < 0) {
+        x = ~x;
+      } else if (x >= width) {
+        x = width * 2 - 1 - x;
+      }
+    }
+    if (y < 0 || y >= height) {
+      y = y % (height * 2);
+      if (y < -height) {
+        y += height * 2;
+      } else if (y < 0) {
+        y = ~y;
+      } else if (y >= height) {
+        y = height * 2 - 1 - y;
+      }
+    }
+    return this.array[y * this.width + x];
+  }
   setAt(x: number, y: number, value: T): void {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
       throw new RangeError('Index out of bounds');
@@ -106,7 +130,7 @@ export function fromLuminances(
   return result;
 }
 
-function fromLinear(value: number): number {
+export function fromLinear(value: number): number {
   if (value < 0.0031308) {
     return value * 12.92;
   } else {

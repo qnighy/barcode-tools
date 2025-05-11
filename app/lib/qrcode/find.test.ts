@@ -24,3 +24,14 @@ test("canny edge detection", async () => {
 
   await fixtures.expectPNG("qr-test1-small-canny.png", input);
 });
+
+test("canny edge detection (test2)", async () => {
+  const input = await fixtures.readPNG("qr-test2.png");
+  canny(
+    input.width,
+    input.height,
+    input.array,
+  );
+
+  await fixtures.expectPNG("qr-test2-canny.png", input);
+});

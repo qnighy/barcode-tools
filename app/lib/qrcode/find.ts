@@ -4,6 +4,8 @@ import { fromThresholded, threshold } from "./thresholding";
 export function find(
   luminances: FloatImage
 ): Uint8x4Image {
+  const minUnitSize = 4;
+  const maxUnitSize = 32;
   const gaussianSigma = 8;
   const thresholded = threshold(luminances, gaussianSigma);
 
@@ -37,6 +39,8 @@ export function find(
 
         if (
           lastX5 >= 0 &&
+          unitSize >= minUnitSize &&
+          unitSize <= maxUnitSize &&
           Math.abs(darkAdjust / unitSize) < 0.2 &&
           diff1 < 0.5 &&
           diff2 < 0.5 &&
@@ -87,6 +91,8 @@ export function find(
 
         if (
           lastY5 >= 0 &&
+          unitSize >= minUnitSize &&
+          unitSize <= maxUnitSize &&
           Math.abs(darkAdjust / unitSize) < 0.2 &&
           diff1 < 0.5 &&
           diff2 < 0.5 &&

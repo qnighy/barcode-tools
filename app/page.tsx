@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactElement, useEffect, useMemo, useState } from "react";
+import { ReactElement, useCallback, useEffect, useMemo, useState } from "react";
 import { BitOverflowError, UnsupportedContentError, encodeToQRSVG, ErrorCorrectionLevelOrNone, QRSymbolType, getMaxBitLength } from "./lib/qrcode";
 
 type QRResult = QRSuccessResult | QRBitOverflowResult | QRUnsupportedContentResult;
@@ -33,6 +33,26 @@ export default function Home(): ReactElement | null {
       : symbolType === "MicroQR" && minErrorCorrectionLevel === "H"
       ? "Q"
       : minErrorCorrectionLevel;
+
+  const [minSize, setMinSize] = useState<number | null>(null);
+  const [maxSize, setMaxSize] = useState<number | null>(null);
+  const symbolMaxSize = symbolType === "QR" ? 40 : 4;
+  const cappedMinSize = Math.max(1, minSize ?? 1);
+  const cappedMaxSize = Math.min(symbolMaxSize, maxSize ?? symbolMaxSize);
+  const setCappedMinSize = useCallback((value: number) => {
+    if (value <= 1) {
+      setMinSize(null);
+    } else {
+      setMinSize(Math.min(value, cappedMaxSize, symbolMaxSize));
+    }
+  }, [cappedMaxSize, symbolMaxSize]);
+  const setCappedMaxSize = useCallback((value: number) => {
+    if (value >= symbolMaxSize) {
+      setMaxSize(null);
+    } else {
+      setMaxSize(Math.max(value, cappedMinSize, 1));
+    }
+  }, [cappedMinSize, symbolMaxSize]);
 
   const [text, setText] = useState<string>("");
   const maxBitLength = useMemo((): number => getMaxBitLength(symbolType, modifiedMinErrorCorrectionLevel), [symbolType, modifiedMinErrorCorrectionLevel]);
@@ -101,6 +121,8 @@ export default function Home(): ReactElement | null {
             value={symbolType}
             onChange={(e) => {
               setSymbolType(e.currentTarget.value as QRSymbolType);
+              setMinSize(null);
+              setMaxSize(null);
             }}
           >
             <option value="QR">QR Code</option>
@@ -144,11 +166,63 @@ export default function Home(): ReactElement | null {
           {percentage}
         </div>
         <div
-          className="w-3xl flex flex-col place-content-center items-center"
+          className="w-3xl min-h-[200px] flex flex-col place-content-center items-center"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {svgURL && <img className="max-h-lvh max-w-full" src={svgURL} alt="Generated QR Code" />}
         </div>
+        <details
+          className="w-3xl flex flex-col place-content-center items-center border border-gray-300 rounded-lg shadow-sm"
+        >
+          <summary
+            className="w-full p-4 text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Settings
+          </summary>
+          <div className="w-3xl p-4 text-left">
+            <h3 className="text-lg font-bold">
+              Size
+            </h3>
+            <label
+              className="flex flex-row gap-2 mb-4 text-sm font-medium text-gray-700"
+            >
+              <div
+                className="w-[15em]"
+              >
+                Minimum Size: {cappedMinSize}
+              </div>
+              <input
+                type="range"
+                className="grow w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                min={1}
+                max={symbolMaxSize}
+                value={cappedMinSize}
+                onChange={(e) => {
+                  setCappedMinSize(Math.trunc(Number(e.currentTarget.value)));
+                }}
+              />
+            </label>
+            <label
+              className="flex flex-row gap-2 mb-4 text-sm font-medium text-gray-700"
+            >
+              <div
+                className="w-[15em]"
+              >
+                Maximum Size: {cappedMaxSize}
+              </div>
+              <input
+                type="range"
+                className="grow w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                min={1}
+                max={symbolMaxSize}
+                value={cappedMaxSize}
+                onChange={(e) => {
+                  setCappedMaxSize(Math.trunc(Number(e.currentTarget.value)));
+                }}
+              />
+            </label>
+          </div>
+        </details>
       </main>
     </div>
   );

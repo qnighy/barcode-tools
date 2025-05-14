@@ -13,6 +13,10 @@ export type { QRSymbolType } from "./qrcode/fitting";
 export type EncodeToQROptions = {
   symbolType: QRSymbolType;
   minErrorCorrectionLevel?: ErrorCorrectionLevelOrNone;
+  minWidth?: number | undefined;
+  maxWidth?: number | undefined;
+  minHeight?: number | undefined;
+  maxHeight?: number | undefined;
 };
 
 export type EncodeToQRMatrixResult = {

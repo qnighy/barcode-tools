@@ -10,6 +10,10 @@ import { generateSVGFromMatrix } from "./svg";
 export type EncodeToMatrixOptions = {
   symbolType: QRSymbolType;
   minErrorCorrectionLevel?: ErrorCorrectionLevelOrNone;
+  minWidth?: number | undefined;
+  maxWidth?: number | undefined;
+  minHeight?: number | undefined;
+  maxHeight?: number | undefined;
 };
 
 export type EncodeToMatrixResult = {
@@ -23,6 +27,10 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions): En
   const {
     symbolType,
     minErrorCorrectionLevel = "NONE",
+    minWidth,
+    maxWidth,
+    minHeight,
+    maxHeight,
   } = options;
   const data: BinaryParts = [{
     // 26 = UTF-8
@@ -32,6 +40,10 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions): En
   const { bits: bodyBits, version, errorCorrectionLevel, bodyBitLength } = fitBytes(data, {
     symbolType,
     minErrorCorrectionLevel,
+    minWidth,
+    maxWidth,
+    minHeight,
+    maxHeight,
   });
   const bitsWithEcc = encodeErrorCorrection(bodyBits, version, errorCorrectionLevel);
 
@@ -52,6 +64,10 @@ export function encodeToMatrix(text: string, options: EncodeToMatrixOptions): En
 export type EncodeToSVGOptions = {
   symbolType: QRSymbolType;
   minErrorCorrectionLevel?: ErrorCorrectionLevelOrNone;
+  minWidth?: number | undefined;
+  maxWidth?: number | undefined;
+  minHeight?: number | undefined;
+  maxHeight?: number | undefined;
 };
 
 export type EncodeToSVGResult = {
@@ -66,11 +82,19 @@ export function encodeToSVG(text: string, options: EncodeToSVGOptions): EncodeTo
   const {
     symbolType,
     minErrorCorrectionLevel = "NONE",
+    minWidth,
+    maxWidth,
+    minHeight,
+    maxHeight,
   } = options;
 
   const { version, errorCorrectionLevel, bodyBitLength, matrix } = encodeToMatrix(text, {
     symbolType,
     minErrorCorrectionLevel,
+    minWidth,
+    maxWidth,
+    minHeight,
+    maxHeight,
   });
   const svg = generateSVGFromMatrix(version, matrix, {
     moduleSize: 10,

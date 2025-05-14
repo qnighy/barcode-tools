@@ -24,6 +24,11 @@ type QRUnsupportedContentResult = {
   svg: null;
 };
 
+const MIN_QR_WIDTH = 21;
+const MAX_QR_WIDTH = 177;
+const MIN_MICRO_QR_WIDTH = 11;
+const MAX_MICRO_QR_WIDTH = 17;
+
 export default function Home(): ReactElement | null {
   const [symbolType, setSymbolType] = useState<QRSymbolType>("QR");
   const [minErrorCorrectionLevel, setMinErrorCorrectionLevel] = useState<ErrorCorrectionLevelOrNone>("NONE");
@@ -34,33 +39,52 @@ export default function Home(): ReactElement | null {
       ? "Q"
       : minErrorCorrectionLevel;
 
-  const [minSize, setMinSize] = useState<number | null>(null);
-  const [maxSize, setMaxSize] = useState<number | null>(null);
-  const symbolMaxSize = symbolType === "QR" ? 40 : 4;
-  const cappedMinSize = Math.max(1, minSize ?? 1);
-  const cappedMaxSize = Math.min(symbolMaxSize, maxSize ?? symbolMaxSize);
-  const setCappedMinSize = useCallback((value: number) => {
-    if (value <= 1) {
-      setMinSize(null);
-    } else {
-      setMinSize(Math.min(value, cappedMaxSize, symbolMaxSize));
-    }
-  }, [cappedMaxSize, symbolMaxSize]);
-  const setCappedMaxSize = useCallback((value: number) => {
-    if (value >= symbolMaxSize) {
-      setMaxSize(null);
-    } else {
-      setMaxSize(Math.max(value, cappedMinSize, 1));
-    }
-  }, [cappedMinSize, symbolMaxSize]);
+  const [minQRWidth, setMinQRWidth] = useState<number>(MIN_QR_WIDTH);
+  const [maxQRWidth, setMaxQRWidth] = useState<number>(MAX_QR_WIDTH);
+  const setAdjustedMinQRWidth = useCallback((value: number) => {
+    setMinQRWidth(Math.min(Math.trunc((value - 17) / 4) * 4 + 17, maxQRWidth));
+  }, [maxQRWidth]);
+  const setAdjustedMaxQRWidth = useCallback((value: number) => {
+    setMaxQRWidth(Math.max(Math.trunc((value - 17) / 4) * 4 + 17, minQRWidth));
+  }, [minQRWidth]);
+
+  const derivedMicroQRWidthLowerBound =
+    minErrorCorrectionLevel === "L" || minErrorCorrectionLevel === "M"
+      ? 13 // M2
+      : minErrorCorrectionLevel === "Q"
+      ? 17 // M4
+      : 11;
+
+  const [minMicroQRWidth, setMinMicroQRWidth] = useState<number>(MIN_MICRO_QR_WIDTH);
+  const [maxMicroQRWidth, setMaxMicroQRWidth] = useState<number>(MAX_MICRO_QR_WIDTH);
+  const maxMicroQRWidth2 = Math.max(maxMicroQRWidth, derivedMicroQRWidthLowerBound);
+  const setAdjustedMinMicroQRWidth = useCallback((value: number) => {
+    setMinMicroQRWidth(Math.min(Math.trunc((value - 9) / 2) * 2 + 9, maxMicroQRWidth));
+  }, [maxMicroQRWidth]);
+  const setAdjustedMaxMicroQRWidth = useCallback((value: number) => {
+    setMaxMicroQRWidth(Math.max(Math.trunc((value - 9) / 2) * 2 + 9, minMicroQRWidth, derivedMicroQRWidthLowerBound));
+  }, [minMicroQRWidth, derivedMicroQRWidthLowerBound]);
+
+  const maxWidth = symbolType === "QR" ? maxQRWidth : maxMicroQRWidth2;
+  const minWidth = Math.min(symbolType === "QR" ? minQRWidth : minMicroQRWidth, maxWidth);
 
   const [text, setText] = useState<string>("");
-  const maxBitLength = useMemo((): number => getMaxBitLength(symbolType, modifiedMinErrorCorrectionLevel), [symbolType, modifiedMinErrorCorrectionLevel]);
+  const maxBitLength = useMemo((): number =>
+    getMaxBitLength({
+      symbolType,
+      minErrorCorrectionLevel: modifiedMinErrorCorrectionLevel,
+      minWidth,
+      maxWidth,
+    }),
+    [symbolType, modifiedMinErrorCorrectionLevel, minWidth, maxWidth]
+  );
   const result = useMemo<QRResult>((): QRResult => {
     try {
       const { bodyBitLength, svg } = encodeToQRSVG(text, {
         symbolType,
         minErrorCorrectionLevel: modifiedMinErrorCorrectionLevel,
+        minWidth,
+        maxWidth,
       });
       return {
         type: "success",
@@ -87,7 +111,7 @@ export default function Home(): ReactElement | null {
       }
       throw e;
     }
-  }, [text, symbolType, modifiedMinErrorCorrectionLevel]);
+  }, [text, symbolType, modifiedMinErrorCorrectionLevel, minWidth, maxWidth]);
 
   const { bodyBitLength, svg } = result;
 
@@ -121,8 +145,10 @@ export default function Home(): ReactElement | null {
             value={symbolType}
             onChange={(e) => {
               setSymbolType(e.currentTarget.value as QRSymbolType);
-              setMinSize(null);
-              setMaxSize(null);
+              setAdjustedMinQRWidth(MIN_QR_WIDTH);
+              setAdjustedMaxQRWidth(MAX_QR_WIDTH);
+              setAdjustedMinMicroQRWidth(MIN_MICRO_QR_WIDTH);
+              setAdjustedMaxMicroQRWidth(MAX_MICRO_QR_WIDTH);
             }}
           >
             <option value="QR">QR Code</option>
@@ -183,44 +209,97 @@ export default function Home(): ReactElement | null {
             <h3 className="text-lg font-bold">
               Size
             </h3>
-            <label
-              className="flex flex-row gap-2 mb-4 text-sm font-medium text-gray-700"
-            >
-              <div
-                className="w-[15em]"
-              >
-                Minimum Size: {cappedMinSize}
-              </div>
-              <input
-                type="range"
-                className="grow w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                min={1}
-                max={symbolMaxSize}
-                value={cappedMinSize}
-                onChange={(e) => {
-                  setCappedMinSize(Math.trunc(Number(e.currentTarget.value)));
-                }}
-              />
-            </label>
-            <label
-              className="flex flex-row gap-2 mb-4 text-sm font-medium text-gray-700"
-            >
-              <div
-                className="w-[15em]"
-              >
-                Maximum Size: {cappedMaxSize}
-              </div>
-              <input
-                type="range"
-                className="grow w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                min={1}
-                max={symbolMaxSize}
-                value={cappedMaxSize}
-                onChange={(e) => {
-                  setCappedMaxSize(Math.trunc(Number(e.currentTarget.value)));
-                }}
-              />
-            </label>
+            {
+              symbolType === "QR" && (
+                <>
+                  <label
+                    className="flex flex-row gap-2 mb-4 text-sm font-medium text-gray-700"
+                  >
+                    <div
+                      className="w-[15em]"
+                    >
+                      Minimum Size: {minQRWidth}
+                    </div>
+                    <input
+                      type="range"
+                      className="grow w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      min={MIN_QR_WIDTH}
+                      max={MAX_QR_WIDTH}
+                      step={4}
+                      value={minQRWidth}
+                      onChange={(e) => {
+                        setAdjustedMinQRWidth(Math.trunc(Number(e.currentTarget.value)));
+                      }}
+                    />
+                  </label>
+                  <label
+                    className="flex flex-row gap-2 mb-4 text-sm font-medium text-gray-700"
+                  >
+                    <div
+                      className="w-[15em]"
+                    >
+                      Maximum Size: {maxQRWidth}
+                    </div>
+                    <input
+                      type="range"
+                      className="grow w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      min={MIN_QR_WIDTH}
+                      max={MAX_QR_WIDTH}
+                      step={4}
+                      value={maxQRWidth}
+                      onChange={(e) => {
+                        setAdjustedMaxQRWidth(Math.trunc(Number(e.currentTarget.value)));
+                      }}
+                    />
+                  </label>
+                </>
+              )
+            }
+            {
+              symbolType === "MicroQR" && (
+                <>
+                  <label
+                    className="flex flex-row gap-2 mb-4 text-sm font-medium text-gray-700"
+                  >
+                    <div
+                      className="w-[15em]"
+                    >
+                      Minimum Size: {minMicroQRWidth}
+                    </div>
+                    <input
+                      type="range"
+                      className="grow w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      min={MIN_MICRO_QR_WIDTH}
+                      max={MAX_MICRO_QR_WIDTH}
+                      step={2}
+                      value={minMicroQRWidth}
+                      onChange={(e) => {
+                        setAdjustedMinMicroQRWidth(Math.trunc(Number(e.currentTarget.value)));
+                      }}
+                    />
+                  </label>
+                  <label
+                    className="flex flex-row gap-2 mb-4 text-sm font-medium text-gray-700"
+                  >
+                    <div
+                      className="w-[15em]"
+                    >
+                      Maximum Size: {maxMicroQRWidth2}
+                    </div>
+                    <input
+                      type="range"
+                      className="grow w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      min={MIN_MICRO_QR_WIDTH}
+                      max={MAX_MICRO_QR_WIDTH}
+                      value={maxMicroQRWidth2}
+                      onChange={(e) => {
+                        setAdjustedMaxMicroQRWidth(Math.trunc(Number(e.currentTarget.value)));
+                      }}
+                    />
+                  </label>
+                </>
+              )
+            }
           </div>
         </details>
       </main>

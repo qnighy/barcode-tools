@@ -381,7 +381,7 @@ function isAlphanumeric_(byte: number): boolean {
     // 'A' - 'Z'
     (byte >= 0x41 && byte <= 0x5A) ||
     // ' ', '$', '%', '*', '+', '-', '.', '/'
-    (byte >= 0x20 && byte <= 0x2F && ALPHANUMERIC_SYMBOL_MAP[byte - 0x20] != null) ||
+    (byte >= 0x20 && byte <= 0x2F && !!ALPHANUMERIC_SYMBOL_MAP[byte - 0x20]) ||
     // ':'
     byte === 0x3A
   );
